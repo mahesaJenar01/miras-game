@@ -1,0 +1,25 @@
+Hallo!
+Ini buat ulang tahun kamu. Aku ngidenya si pengen bikinin kamu game gitu.
+Yang ada di kepala aku, gamenya itu kaya game stickman yang ngelawan musuh. Nah nanti di akhir bakal ada finish linenya gitu.
+Udah si paling itu aja, tapi karena kamu penasaran sama proses pembuatannya, jadi yaudah deh aku bakal coba record seluruhnya. Ini kemungkinan bakal makan waktu berjam-jam.
+Belum lagi debugging, improving, dan lain sebagainya. Jadi nanti aku bakal potong beberapa bagian karena pasti bakal lama banget.
+Sama nanti pasti aku bakal konsultasi ke AI juga dan link nya bakal aku kasih ke bagian ini juga deh! Ok i don't know, do you really enjoy it? If you do damn, you love the process? I am happy to hear that! None ever told me that they want to see what i was doing. They just simply want the result, but you?! Tf! Ok!
+
+Pertama yang harus kita lakuin tuh adalah bikin file bernama "index.html". Let's go then!
+
+Canvas itu element, kita bisa pakai element itu untuk menggambar, sama kaya canvas yang di pake sama vincent van gogh buat bikin Starry Night!
+
+Selanjutnya kita harus bikin 2 file lagi, yang pertama itu namanya "style.css" dan yang kedua tuh namanya "main.js". Let's go then!
+
+Nah, "style.js" itu dipakai untuk memberikan "style" kepada element "canvas" itu tadi.
+"main.js" itself is used to drawing the actual stroke!
+
+Ok, sekarang kita buka previewnya dulu ya!
+
+Ok resizingnya udah works, sekarang baru deh kita mulai bikin stickfigurenya!
+
+Pertama kita harus define semuanya satu per satu mir. Kita harus define setiap bagian, kaya kepala, badan, tangan, dan kakinya semua satu per satu. Let's see!
+
+Ok, kita cek dulu yu, kepalanya ke render atau ngga!
+
+Udah setengah 7 malem mir, udah dulu ya, besok aku lanjut lagi dengan rekaman yang sama! Wait aku lupa, aku mau ngedeploy dulu, pingin simpen di github gitu, ill let you see this!
