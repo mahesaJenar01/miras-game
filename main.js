@@ -2,8 +2,8 @@ const canvas= document.getElementById("canvas");
 const context= canvas.getContext("2d");
 
 function resizeCanvas(){
-    canvas.width= window.innerWidth;
-    canvas.height= window.innerHeight;
+    canvas.width= window.innerWidth * 0.9;
+    canvas.height= window.innerHeight * 0.9;
 };
 
 resizeCanvas();
@@ -19,9 +19,9 @@ function main(){
 
     // Ground configuration
     const xGroundPosition= 0;
-    const yGroundPosition= window.innerHeight * 0.8;
-    const heightGround= window.innerHeight * 0.2;
-    const widthGround= window.innerWidth;
+    const yGroundPosition= canvas.offsetHeight * 0.8;
+    const heightGround= canvas.offsetHeight * 0.2;
+    const widthGround= canvas.offsetWidth;
     
     const stickfigure= new Stickfigure(
         context, xStickfigurePosition, 
