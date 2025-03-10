@@ -1,15 +1,16 @@
-class Base{
-    constructor(context, x, y, color){
+class BaseStickfigure{
+    constructor(context, x, y, color, tickness){
         this.x= x;
         this.y= y;
         this.color= color;
         this.context= context;
+        this.tickness= tickness;
     };
 };
 
-class Head extends Base{
-    constructor(context, x, y, color, radius){
-        super(context, x, y, color);
+class Head extends BaseStickfigure{
+    constructor(context, x, y, color, tickness, radius){
+        super(context, x, y, color, tickness);
         this.radius= radius;
     };
 
@@ -20,14 +21,15 @@ class Head extends Base{
             0, Math.PI * 2
         );
         this.context.strokeStyle= this.color;
+        this.context.lineWidth= this.tickness;
         this.context.stroke();
         this.context.closePath();
     };
 };
 
-class Body extends Base{
-    constructor(context, x, y, color, length= 50){
-        super(context, x, y, color);
+class Body extends BaseStickfigure{
+    constructor(context, x, y, color, tickness, length= 50){
+        super(context, x, y, color, tickness);
         this.length= length;
     }
 
@@ -36,18 +38,18 @@ class Body extends Base{
         this.context.moveTo(this.x, this.y);
         this.context.lineTo(this.x, this.y + this.length);
         this.context.strokeStyle= this.color;
-        this.context.lineWidth= 4;
+        this.context.lineWidth= this.tickness;
         this.context.stroke();
         this.context.closePath();
     };
 };
 
-class Hand extends Base{
+class Hand extends BaseStickfigure{
     constructor(
-        context, x, y, color, 
+        context, x, y, color, tickness,  
         isLeft= true, length= 20
     ){
-        super(context, x, y, color);
+        super(context, x, y, color, tickness);
         this.length= length;
         this.isLeft= isLeft;
     };
@@ -67,18 +69,18 @@ class Hand extends Base{
             );
         };
         this.context.strokeStyle= this.color;
-        this.context.lineWidth= 4;
+        this.context.lineWidth= this.tickness;
         this.context.stroke();
         this.context.closePath();
     };
 };
 
-class Leg extends Base{
+class Leg extends BaseStickfigure{
     constructor(
-        context, x, y, color, 
+        context, x, y, color, tickness, 
         isLeft=true, length= 30
     ){
-        super(context, x, y, color);
+        super(context, x, y, color, tickness);
         this.isLeft= isLeft;
         this.length= length;
     };
@@ -98,51 +100,56 @@ class Leg extends Base{
             );
         };
         this.context.strokeStyle= this.color;
-        this.context.lineWidth= 4;
+        this.context.lineWidth= this.tickness;
         this.context.stroke();
         this.context.closePath();
     };
 };
 
-class Stickfigure extends Base{
-    constructor(context, x, y, color, radius){
-        super(context, x, y);
+class Stickfigure extends BaseStickfigure{
+    constructor(context, x, y, color, tickness, radius= 20){
+        super(context, x, y, color, tickness);
+
         this.radius= radius;
-        this.color= color;
-        this.handsPosition= 30;
-        this.legsPosition= 70;
+        this.bodyLength= this.radius * 2.5;
+        this.legsPosition= this.y + (this.bodyLength * 1.4);
+        this.handsPosition= this.y + (this.bodyLength * 0.6);
     };
 
     draw(){
         const head= new Head(
             this.context, this.x, 
-            this.y, this.color, this.radius
+            this.y, this.color, this.tickness, 
+            this.radius
         );
 
         const body= new Body(
             this.context, this.x, 
-            this.y + this.radius, this.color
+            this.y + this.radius, this.color, 
+            this.tickness, this.bodyLength
         );
 
         
         const leftHand= new Hand(
             this.context, this.x, 
-            this.y + this.handsPosition, this.color
+            this.handsPosition, this.color, 
+            this.tickness
         );
         const rightHand= new Hand(
-            this.context, this.x, 
-            this.y + this.handsPosition, this.color, 
-            false
+            this.context, this.x,
+            this.handsPosition, this.color, 
+            this.tickness, false
         );
         
         const leftLeg= new Leg(
             this.context, this.x, 
-            this.y + this.legsPosition, this.color
+            this.legsPosition, this.color, 
+            this.tickness
         );
         const rightLeg= new Leg(
             this.context, this.x, 
-            this.y + this.legsPosition, this.color, 
-            false
+            this.legsPosition, this.color, 
+            this.tickness, false
         );
 
         head.draw();
