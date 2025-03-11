@@ -47,7 +47,7 @@ class Body extends BaseStickfigure{
 class Hand extends BaseStickfigure{
     constructor(
         context, x, y, color, tickness,  
-        isLeft= true, length= 20
+        isLeft= true, length
     ){
         super(context, x, y, color, tickness);
         this.length= length;
@@ -78,7 +78,7 @@ class Hand extends BaseStickfigure{
 class Leg extends BaseStickfigure{
     constructor(
         context, x, y, color, tickness, 
-        isLeft=true, length= 30
+        isLeft=true, length
     ){
         super(context, x, y, color, tickness);
         this.isLeft= isLeft;
@@ -107,13 +107,16 @@ class Leg extends BaseStickfigure{
 };
 
 class Stickfigure extends BaseStickfigure{
-    constructor(context, x, y, color, tickness, radius= 20){
+    constructor(context, x, y, color, tickness, radius){
         super(context, x, y, color, tickness);
 
         this.radius= radius;
         this.bodyLength= this.radius * 2.5;
         this.legsPosition= this.y + (this.bodyLength * 1.4);
         this.handsPosition= this.y + (this.bodyLength * 0.6);
+
+        this.handsLength= this.radius;
+        this.legLength= this.radius * 1.5;
     };
 
     draw(){
@@ -133,23 +136,23 @@ class Stickfigure extends BaseStickfigure{
         const leftHand= new Hand(
             this.context, this.x, 
             this.handsPosition, this.color, 
-            this.tickness
+            this.tickness, true, this.handsLength
         );
         const rightHand= new Hand(
             this.context, this.x,
             this.handsPosition, this.color, 
-            this.tickness, false
+            this.tickness, false, this.handsLength
         );
         
         const leftLeg= new Leg(
             this.context, this.x, 
             this.legsPosition, this.color, 
-            this.tickness
+            this.tickness, true, this.handsLength
         );
         const rightLeg= new Leg(
             this.context, this.x, 
             this.legsPosition, this.color, 
-            this.tickness, false
+            this.tickness, false, this.handsLength
         );
 
         head.draw();
