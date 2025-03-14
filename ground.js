@@ -1,28 +1,25 @@
-class BaseGround{
-    constructor(context, x, y, height, width){
-        this.x= x;
-        this.y= y;
-        this.width= width;
-        this.height= height;
-        this.context= context;
-    };
-};
+class BaseGround {
+    constructor(context, x, y, height, width) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.context = context;
+    }
+}
 
-class SubGround extends BaseGround{
-    constructor(context, x, y, height, width, color){
+class SubGround extends BaseGround {
+    constructor(context, x, y, height, width, color) {
         super(context, x, y, height, width);
-        this.color= color;
+        this.color = color;
     }
 
-    draw(){
+    draw() {
         this.context.beginPath();
-        this.context.fillStyle= this.color;
-        this.context.fillRect(
-            this.x, this.y, 
-            this.width, this.height
-        )
+        this.context.fillStyle = this.color;
+        this.context.fillRect(this.x, this.y, this.width, this.height);
         this.context.closePath();
-    };
+    }
 }
 
 class Ground extends BaseGround {
@@ -35,25 +32,25 @@ class Ground extends BaseGround {
         this.grassColors = ["#A9DE9F", "#B9E4AA", "#C9EBB5"]; // Soft green variations
         this.dirtColors = ["#D9BFA9", "#E3CAB1", "#F0DDCA"]; // Soft earth tones
         
-        // Flowers
+        // Pre-calculate flowers relative to the tile
         this.flowers = [];
         const flowerCount = Math.floor(width / 100);
         for (let i = 0; i < flowerCount; i++) {
             this.flowers.push({
                 x: Math.random() * width,
-                y: y + Math.random() * (this.grassHeight * 0.8),
+                y: Math.random() * (this.grassHeight * 0.8),
                 size: 3 + Math.random() * 4,
                 color: this.getRandomFlowerColor()
             });
         }
         
-        // Butterflies
+        // Pre-calculate butterflies relative to the tile
         this.butterflies = [];
         const butterflyCount = Math.floor(width / 300);
         for (let i = 0; i < butterflyCount; i++) {
             this.butterflies.push({
                 x: Math.random() * width,
-                y: y - (10 + Math.random() * 40),
+                y: Math.random() * 40, // relative vertical offset
                 size: 5 + Math.random() * 3,
                 wingColor: this.getRandomFlowerColor(),
                 angle: 0,
@@ -61,6 +58,19 @@ class Ground extends BaseGround {
                 direction: Math.random() * Math.PI * 2,
                 flapSpeed: 0.1 + Math.random() * 0.1
             });
+        }
+        
+        // Pre-calculate grass details for seamless tiling
+        this.grassDetails = [];
+        for (let i = 0; i < width; i += 10) {
+            const grassDetailHeight = this.grassHeight * 0.2 + Math.random() * this.grassHeight * 0.3;
+            const controlX = i + (Math.random() - 0.5) * 10;
+            const controlY = this.y - grassDetailHeight * 0.7;
+            const endX = i + (Math.random() - 0.5) * 5;
+            const endY = this.y - grassDetailHeight;
+            const strokeWidth = 1 + Math.random();
+            const colorIndex = Math.floor(Math.random() * this.grassColors.length);
+            this.grassDetails.push({ i, controlX, controlY, endX, endY, strokeWidth, colorIndex });
         }
     }
     
@@ -83,43 +93,61 @@ class Ground extends BaseGround {
             // Update wing flap
             butterfly.angle += butterfly.flapSpeed;
             
-            // Keep butterflies within bounds
+            // Keep butterflies within tile bounds
             if (butterfly.x < 0) butterfly.x = this.width;
             if (butterfly.x > this.width) butterfly.x = 0;
-            if (butterfly.y < this.y - 50) butterfly.y = this.y - 10;
-            if (butterfly.y > this.y - 5) butterfly.y = this.y - 5;
+            if (butterfly.y < 0) butterfly.y = 0;
+            if (butterfly.y > 40) butterfly.y = 40;
         }
     }
     
-    drawGrassDetails() {
-        // Draw grass blades
-        for (let i = 0; i < this.width; i += 10) {
-            const grassHeight = this.grassHeight * 0.2 + Math.random() * this.grassHeight * 0.3;
-            const colorIndex = Math.floor(Math.random() * this.grassColors.length);
-            
+    // Draw a single ground tile at the given x offset
+    drawTile(xOffset) {
+        // Draw grass with a gradient
+        const grassGradient = this.context.createLinearGradient(xOffset, this.y, xOffset, this.y + this.grassHeight);
+        grassGradient.addColorStop(0, this.grassColors[0]);
+        grassGradient.addColorStop(1, this.grassColors[2]);
+        this.context.beginPath();
+        this.context.fillStyle = grassGradient;
+        this.context.fillRect(xOffset, this.y, this.width, this.grassHeight);
+        this.context.closePath();
+        
+        // Draw dirt with a gradient
+        const dirtGradient = this.context.createLinearGradient(xOffset, this.y + this.grassHeight, xOffset, this.y + this.height);
+        dirtGradient.addColorStop(0, this.dirtColors[0]);
+        dirtGradient.addColorStop(1, this.dirtColors[2]);
+        this.context.beginPath();
+        this.context.fillStyle = dirtGradient;
+        this.context.fillRect(xOffset, this.y + this.grassHeight, this.width, this.dirtHeight);
+        this.context.closePath();
+        
+        // Draw static details
+        this.drawGrassDetails(xOffset);
+        this.drawFlowers(xOffset);
+        this.drawButterflies(xOffset);
+    }
+    
+    drawGrassDetails(xOffset) {
+        for (const detail of this.grassDetails) {
             this.context.beginPath();
-            this.context.moveTo(this.x + i, this.y);
-            
-            // Create curved grass blade
-            const controlX = this.x + i + (Math.random() - 0.5) * 10;
-            const controlY = this.y - grassHeight * 0.7;
-            const endX = this.x + i + (Math.random() - 0.5) * 5;
-            const endY = this.y - grassHeight;
-            
-            this.context.quadraticCurveTo(controlX, controlY, endX, endY);
-            this.context.strokeStyle = this.grassColors[colorIndex];
-            this.context.lineWidth = 1 + Math.random();
+            this.context.moveTo(xOffset + detail.i, this.y);
+            this.context.quadraticCurveTo(
+                xOffset + detail.controlX, detail.controlY,
+                xOffset + detail.endX, detail.endY
+            );
+            this.context.strokeStyle = this.grassColors[detail.colorIndex];
+            this.context.lineWidth = detail.strokeWidth;
             this.context.stroke();
             this.context.closePath();
         }
     }
     
-    drawFlowers() {
+    drawFlowers(xOffset) {
         for (const flower of this.flowers) {
             // Draw stem
             this.context.beginPath();
-            this.context.moveTo(flower.x, this.y);
-            this.context.lineTo(flower.x, flower.y + flower.size);
+            this.context.moveTo(xOffset + flower.x, this.y);
+            this.context.lineTo(xOffset + flower.x, this.y + flower.size);
             this.context.strokeStyle = "#A9DE9F";
             this.context.lineWidth = 1;
             this.context.stroke();
@@ -129,9 +157,8 @@ class Ground extends BaseGround {
             const petalCount = 5;
             for (let i = 0; i < petalCount; i++) {
                 const angle = (i / petalCount) * Math.PI * 2;
-                const petalX = flower.x + Math.cos(angle) * flower.size;
-                const petalY = flower.y + Math.sin(angle) * flower.size;
-                
+                const petalX = xOffset + flower.x + Math.cos(angle) * flower.size;
+                const petalY = this.y + flower.y + Math.sin(angle) * flower.size;
                 this.context.beginPath();
                 this.context.arc(petalX, petalY, flower.size * 0.7, 0, Math.PI * 2);
                 this.context.fillStyle = flower.color;
@@ -141,44 +168,35 @@ class Ground extends BaseGround {
             
             // Draw center
             this.context.beginPath();
-            this.context.arc(flower.x, flower.y, flower.size * 0.5, 0, Math.PI * 2);
+            this.context.arc(xOffset + flower.x, this.y + flower.y, flower.size * 0.5, 0, Math.PI * 2);
             this.context.fillStyle = "#FFEB85";
             this.context.fill();
             this.context.closePath();
         }
     }
     
-    drawButterflies() {
+    drawButterflies(xOffset) {
         for (const butterfly of this.butterflies) {
             this.context.save();
-            this.context.translate(butterfly.x, butterfly.y);
+            // Adjust the vertical position relative to the ground
+            this.context.translate(xOffset + butterfly.x, this.y - 10 + butterfly.y);
             
-            // Draw wings
+            // Draw left wing
             const wingSpan = butterfly.size * 2 * Math.abs(Math.sin(butterfly.angle));
-            
-            // Left wing
             this.context.beginPath();
-            this.context.ellipse(
-                -butterfly.size * 0.5, 0,
-                wingSpan, butterfly.size,
-                Math.PI * 0.25, 0, Math.PI * 2
-            );
+            this.context.ellipse(-butterfly.size * 0.5, 0, wingSpan, butterfly.size, Math.PI * 0.25, 0, Math.PI * 2);
             this.context.fillStyle = butterfly.wingColor;
             this.context.fill();
             this.context.closePath();
             
-            // Right wing
+            // Draw right wing
             this.context.beginPath();
-            this.context.ellipse(
-                butterfly.size * 0.5, 0,
-                wingSpan, butterfly.size,
-                -Math.PI * 0.25, 0, Math.PI * 2
-            );
+            this.context.ellipse(butterfly.size * 0.5, 0, wingSpan, butterfly.size, -Math.PI * 0.25, 0, Math.PI * 2);
             this.context.fillStyle = butterfly.wingColor;
             this.context.fill();
             this.context.closePath();
             
-            // Body
+            // Draw body
             this.context.beginPath();
             this.context.ellipse(0, 0, butterfly.size * 0.2, butterfly.size * 0.8, 0, 0, Math.PI * 2);
             this.context.fillStyle = "#333";
@@ -188,40 +206,19 @@ class Ground extends BaseGround {
             this.context.restore();
         }
     }
-
-    draw() {
-        // Update animations
+    
+    // The main draw method accepts the current worldOffset to tile the ground seamlessly
+    draw(worldOffset) {
+        // Update dynamic elements (like butterflies)
         this.updateButterflies();
         
-        // Draw base grass with gradient
-        const grassGradient = this.context.createLinearGradient(0, this.y, 0, this.y + this.grassHeight);
-        grassGradient.addColorStop(0, this.grassColors[0]);
-        grassGradient.addColorStop(1, this.grassColors[2]);
-        
-        this.context.beginPath();
-        this.context.fillStyle = grassGradient;
-        this.context.fillRect(
-            this.x, this.y, 
-            this.width, this.grassHeight
-        );
-        this.context.closePath();
-        
-        // Draw dirt with gradient
-        const dirtGradient = this.context.createLinearGradient(0, this.y + this.grassHeight, 0, this.y + this.height);
-        dirtGradient.addColorStop(0, this.dirtColors[0]);
-        dirtGradient.addColorStop(1, this.dirtColors[2]);
-        
-        this.context.beginPath();
-        this.context.fillStyle = dirtGradient;
-        this.context.fillRect(
-            this.x, this.y + this.grassHeight,
-            this.width, this.dirtHeight
-        );
-        this.context.closePath();
-        
-        // Draw details
-        this.drawGrassDetails();
-        this.drawFlowers();
-        this.drawButterflies();
+        // Calculate the tile offset using modulus so the tile repeats seamlessly
+        const offset = worldOffset % this.width;
+        // Draw the first tile at the adjusted x position
+        this.drawTile(this.x - offset);
+        // Draw a second tile if needed to cover the full canvas width
+        if ((this.x - offset + this.width) < canvas.width) {
+            this.drawTile(this.x - offset + this.width);
+        }
     }
 }
