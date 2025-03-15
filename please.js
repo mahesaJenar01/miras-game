@@ -174,5 +174,3 @@ class Stickfigure extends BaseStickfigure {
         this.context.closePath();
     }
 }
-
-// Nah, ini better, we just need a slightly refinement aja, let's take a look mir!
