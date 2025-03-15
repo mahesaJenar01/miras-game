@@ -13,7 +13,6 @@ class Head extends BaseStickfigure {
         super(context, x, y, color, tickness);
         this.radius = radius;
     }
-
     draw() {
         this.context.beginPath();
         this.context.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
@@ -29,7 +28,6 @@ class Body extends BaseStickfigure {
         super(context, x, y, color, tickness);
         this.length = length;
     }
-
     draw() {
         this.context.beginPath();
         this.context.moveTo(this.x, this.y);
@@ -47,15 +45,31 @@ class Hand extends BaseStickfigure {
         this.length = length;
         this.isLeft = isLeft;
     }
-
+    // Static drawing (default hand position)
     draw() {
         this.context.beginPath();
         this.context.moveTo(this.x, this.y);
         if (this.isLeft) {
-            this.context.lineTo(this.x - this.length, this.y + this.length);
+            this.context.lineTo(this.x - this.length * 0.75, this.y + this.length);
         } else {
-            this.context.lineTo(this.x + this.length, this.y + this.length);
+            this.context.lineTo(this.x + this.length * 0.75, this.y + this.length);
         }
+        this.context.strokeStyle = this.color;
+        this.context.lineWidth = this.tickness;
+        this.context.stroke();
+        this.context.closePath();
+    }
+    // Animated drawing using a swing value (e.g. armSwing)
+    walkingAnimation(armSwing) {
+        // Here we start at a base angle of Math.PI/2 (vertical) and add the swing offset.
+        const angle = Math.PI / 2 + armSwing;
+        const endX = this.isLeft
+            ? this.x - Math.cos(angle) * this.length
+            : this.x + Math.cos(angle) * this.length;
+        const endY = this.y + Math.sin(angle) * this.length;
+        this.context.beginPath();
+        this.context.moveTo(this.x, this.y);
+        this.context.lineTo(endX, endY);
         this.context.strokeStyle = this.color;
         this.context.lineWidth = this.tickness;
         this.context.stroke();
@@ -69,110 +83,121 @@ class Leg extends BaseStickfigure {
         this.isLeft = isLeft;
         this.length = length;
     }
-
+    // Static drawing (default leg position)
     draw() {
         this.context.beginPath();
         this.context.moveTo(this.x, this.y);
         if (this.isLeft) {
-            this.context.lineTo(this.x - this.length, this.y + this.length);
+            this.context.lineTo(this.x - this.length * 0.5, this.y + this.length);
         } else {
-            this.context.lineTo(this.x + this.length, this.y + this.length);
+            this.context.lineTo(this.x + this.length * 0.5, this.y + this.length);
         }
         this.context.strokeStyle = this.color;
         this.context.lineWidth = this.tickness;
         this.context.stroke();
         this.context.closePath();
+    };
+    
+    // Animated drawing using a swing value (e.g. legSwing)
+    walkingAnimation(legSwing) {
+        // Base angle is Math.PI/2 (vertical) plus the swing offset.
+        const angle = Math.PI / 2 + legSwing;
+        const endX = this.isLeft
+            ? this.x - Math.cos(angle) * this.length
+            : this.x + Math.cos(angle) * this.length;
+        const endY = this.y + Math.sin(angle) * this.length;
+        this.context.beginPath();
+        this.context.moveTo(this.x, this.y);
+        this.context.lineTo(endX, endY);
+        this.context.strokeStyle = this.color;
+        this.context.lineWidth = this.tickness;
+        this.context.stroke();
+        this.context.closePath();
     }
 }
 
-// Enhanced Stickfigure with animated limb movement
 class Stickfigure extends BaseStickfigure {
     constructor(context, x, y, color, tickness, radius) {
         super(context, x, y, color, tickness);
         this.radius = radius;
         this.bodyLength = this.radius * 2.5;
+
+        // Define the vertical positions for shoulders (arms) and hips (legs)
         this.handsPosition = this.y + (this.bodyLength * 0.6);
         this.legsPosition = this.y + (this.bodyLength * 1.4);
         this.handsLength = this.radius;
         this.legLength = this.radius * 1.5;
+
+        // Variables for walking animation
         this.walkCycle = 0;
-        this.swingAmplitude = Math.PI / 6; // 30° swing - can be adjusted
-        this.walkSpeed = 0.1; // Animation speed - can be adjusted
+        this.swingAmplitude = Math.PI / 6; // 30° swing amplitude
+        this.walkSpeed = 0.1; // Animation speed
+
+        // New property to control if the stickfigure is walking
+        this.isWalking = false;
     }
-
+    
     draw() {
-        // Update the walk cycle for dynamic animation
-        this.walkCycle += this.walkSpeed;
-        const legSwing = Math.sin(this.walkCycle) * this.swingAmplitude;
-        const armSwing = Math.sin(this.walkCycle) * (this.swingAmplitude * 0.8); // Arms swing slightly less than legs
-
+        let legSwing, armSwing;
+        if (this.isWalking) {
+            // Only update walkCycle if walking
+            this.walkCycle += this.walkSpeed;
+            legSwing = Math.sin(this.walkCycle) * this.swingAmplitude;
+            armSwing = Math.sin(this.walkCycle) * (this.swingAmplitude * 0.8);
+        } else {
+            // No swing when idle
+            legSwing = 0;
+            armSwing = 0;
+        }
+        
         // Draw head (static)
         const head = new Head(this.context, this.x, this.y, this.color, this.tickness, this.radius);
         head.draw();
-
+        
         // Draw body (static)
         const body = new Body(this.context, this.x, this.y + this.radius, this.color, this.tickness, this.bodyLength);
         body.draw();
-
-        // --- Arms Animation ---
-        // For proper walking animation, arms should swing opposite to legs
-        // Arms are drawn from shoulders (slightly below head)
         
-        // Draw left arm
-        const leftArmAngle = Math.PI / 2 + armSwing; // Perpendicular to body minus swing
-        const leftArmEndX = this.x - Math.cos(leftArmAngle) * this.handsLength;
-        const leftArmEndY = this.handsPosition + Math.sin(leftArmAngle) * this.handsLength;
+        // Draw arms
+        const leftHand = new Hand(
+            this.context, this.x, 
+            this.handsPosition, this.color, 
+            this.tickness, true, 
+            this.handsLength
+        );
+        const rightHand = new Hand(
+            this.context, this.x, 
+            this.handsPosition, this.color, 
+            this.tickness, false, 
+            this.handsLength
+        );
+        if (this.isWalking) {
+            leftHand.walkingAnimation(armSwing);
+            rightHand.walkingAnimation(armSwing);
+        } else {
+            leftHand.draw();
+            rightHand.draw();
+        }
         
-        this.context.beginPath();
-        this.context.moveTo(this.x, this.handsPosition);
-        this.context.lineTo(leftArmEndX, leftArmEndY);
-        this.context.strokeStyle = this.color;
-        this.context.lineWidth = this.tickness;
-        this.context.stroke();
-        this.context.closePath();
-
-        // Draw right arm
-        const rightArmAngle = Math.PI / 2 + armSwing; // Perpendicular to body plus swing
-        const rightArmEndX = this.x + Math.cos(rightArmAngle) * this.handsLength;
-        const rightArmEndY = this.handsPosition + Math.sin(rightArmAngle) * this.handsLength;
-        
-        this.context.beginPath();
-        this.context.moveTo(this.x, this.handsPosition);
-        this.context.lineTo(rightArmEndX, rightArmEndY);
-        this.context.strokeStyle = this.color;
-        this.context.lineWidth = this.tickness;
-        this.context.stroke();
-        this.context.closePath();
-
-        // --- Legs Animation ---
-        // For forward-facing walking animation, legs swing forward and backward
-        
-        // Draw left leg
-        const leftLegAngle = Math.PI / 2 + legSwing; // Perpendicular to body minus swing
-        const leftLegEndX = this.x - Math.cos(leftLegAngle) * this.legLength;
-        const leftLegEndY = this.legsPosition + Math.sin(leftLegAngle) * this.legLength;
-        
-        this.context.beginPath();
-        this.context.moveTo(this.x, this.legsPosition);
-        this.context.lineTo(leftLegEndX, leftLegEndY);
-        this.context.strokeStyle = this.color;
-        this.context.lineWidth = this.tickness;
-        this.context.stroke();
-        this.context.closePath();
-
-        // Draw right leg
-        const rightLegAngle = Math.PI / 2 + legSwing; // Perpendicular to body plus swing
-        const rightLegEndX = this.x + Math.cos(rightLegAngle) * this.legLength;
-        const rightLegEndY = this.legsPosition + Math.sin(rightLegAngle) * this.legLength;
-        
-        this.context.beginPath();
-        this.context.moveTo(this.x, this.legsPosition);
-        this.context.lineTo(rightLegEndX, rightLegEndY);
-        this.context.strokeStyle = this.color;
-        this.context.lineWidth = this.tickness;
-        this.context.stroke();
-        this.context.closePath();
+        // Draw legs
+        const leftLeg = new Leg(
+            this.context, this.x, 
+            this.legsPosition, this.color, 
+            this.tickness, true, 
+            this.legLength
+        );
+        const rightLeg = new Leg(
+            this.context, this.x, 
+            this.legsPosition, this.color, 
+            this.tickness, false, 
+            this.legLength
+        );
+        if (this.isWalking) {
+            leftLeg.walkingAnimation(legSwing);
+            rightLeg.walkingAnimation(legSwing);
+        } else {
+            leftLeg.draw();
+            rightLeg.draw();
+        }
     }
 }
-
-// Nah, ini better, we just need a slightly refinement aja, let's take a look mir!
