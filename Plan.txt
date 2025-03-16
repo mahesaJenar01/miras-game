@@ -78,3 +78,17 @@ Aku sebenernya udah ngerjain di luar rekaman ini, soalnya agak pusinggg dan maka
 Aku ada konsultasi ke AI yang hasilnya juga WEIRD HAHA.
 
 Look at this: I mean, let's take a look!
+
+Hari ini gue seneng banget, gatau mau ngomong apa haha
+
+Ok, kita bakal lanjut bikin buttons-nya ya mir untuk hari ini.
+
+Sebenernya aku udah mulai buka codenya dari jam 5 sore tadi, aku restructure codenya gitu, biar lebih gampang buat di update.
+
+Soalnya nanti animasi kita bakal jadi jauh lebih kompleks lagi, terutama pas kita udah tambahan enemies, wah itu bakal kompleks banget, jadi aku harus restructure dulu sebelum ini jadi begitu gede lagi.
+
+Karena itu agak boring ya, jadi aku ga videoin, dan emang cenderung lama juga haha.
+
+Sebenernya setelah rekaman kemarin, aku juga sempet nyentuh kodenya lagi, aku utak atik gitu, sama si restructure juga, karena masih belum selesai, jadi diselesain di hari ini deh.
+
+Ok let's take a look!
