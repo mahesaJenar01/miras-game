@@ -9,36 +9,25 @@
 <body>
   <canvas id="canvas"></canvas>
   
-  <!-- Game control buttons -->
-  <button id="move-btn" class="game-button">Move</button>
-  <button id="jump-btn" class="game-button">Jump</button>
-  <button id="attack-btn" class="game-button">Attack</button>
-
+  <!-- Buttons for game controls -->
+  <div id="controls">
+    <button id="move-btn">Move</button>
+    <button id="attack-btn">Attack</button>
+    <button id="jump-btn">Jump</button>
+  </div>
+  
   <script src="sun.js"></script>
   <script src="cloud.js"></script>
   <script src="sky.js"></script>
   <script src="ground.js"></script>
   <script src="stickfigure.js"></script>
   <script src="setup.js"></script>
+  <script src="controls.js"></script>
   <script src="main.js"></script>
-  
-  <!-- Dynamic positioning for the buttons -->
-  <script>
-    function positionButtons() {
-      const canvas = document.getElementById("canvas");
-      const canvasRect = canvas.getBoundingClientRect();
-      // configuration.ground is defined in setup.js.
-      // Ground.y is set to canvas.offsetHeight * 0.8 and ground.height is canvas.offsetHeight * 0.2.
-      const dirtCenterY = canvasRect.top + configuration.ground.y + (configuration.ground.height / 2);
-      const buttons = document.querySelectorAll('.game-button');
-      buttons.forEach(button => {
-        // Position each button so its vertical center aligns with the dirt's vertical center.
-        button.style.top = (dirtCenterY - button.offsetHeight / 5) + "px";
-      });
-    }
-    
-    window.addEventListener("resize", positionButtons);
-    window.addEventListener("load", positionButtons);
-  </script>
+  <script src="moveButton.js"></script>
 </body>
 </html>
+
+<!-- 
+Sebenernya aku udah ada banyak melakukan perubahan pada kodenya, karena itu sangat membosankan dan hasil dari tampilannya tidak terlihat, jadi aku tidak memvideokannya, so this video doesn't take/took (which one more appropriate huh?) so long to record too!
+-->
