@@ -55,6 +55,11 @@ class Game {
     this.components.ground.draw(this.worldOffset);
     this.context.restore();
 
+    // Update jump physics for the stickfigure before drawing
+    if (this.components.stickfigure.updateJump) {
+      this.components.stickfigure.updateJump();
+    }
+
     // Draw the stickfigure on top so it remains static on screen
     this.components.stickfigure.draw();
 
