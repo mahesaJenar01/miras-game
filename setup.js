@@ -26,17 +26,17 @@ const configuration = {
     { x: canvas.width * 0.8, y: canvas.height * 0.3, size: canvas.height * 0.025, speed: 0.12 }
   ],
   stickfigure: {
-    x: 10 + (canvas.offsetHeight * 0.05),
-    y: canvas.offsetHeight * 0.575,
+    x: 10 + (canvas.height * 0.05), // Use height directly instead of offsetHeight
+    y: canvas.height * 0.575,
     color: "#FF69B4", // Hot pink for a girly look
     tickness: 3,
-    radius: canvas.offsetHeight * 0.05
+    radius: canvas.height * 0.05
   },
   ground: {
     x: 0,
-    y: canvas.offsetHeight * 0.8,
-    height: canvas.offsetHeight * 0.2,
-    width: canvas.offsetWidth
+    y: canvas.height * 0.8,
+    height: canvas.height * 0.2,
+    width: canvas.width
   }
 };
 
@@ -88,8 +88,25 @@ let clouds = createClouds(context, canvas);
 let stickfigure = createStickfigure(context, canvas);
 let ground = createGround(context, canvas);
 
+// Debounce function to prevent multiple rapid resize events
+function debounce(func, wait) {
+  let timeout;
+  return function() {
+    const context = this;
+    const args = arguments;
+    clearTimeout(timeout);
+    timeout = setTimeout(() => {
+      func.apply(context, args);
+    }, wait);
+  };
+}
+
 // Update components when the window is resized
 function resizeCanvas() {
+  // Store previous worldOffset if game exists
+  const previousWorldOffset = window.game ? window.game.worldOffset : 0;
+  const wasWalking = window.game ? window.game.isWalking : false;
+  
   setCanvasSize();
   
   // Update configuration values based on the new canvas size
@@ -107,13 +124,13 @@ function resizeCanvas() {
     { x: canvas.width * 0.8, y: canvas.height * 0.3, size: canvas.height * 0.025, speed: 0.12 }
   ];
   
-  configuration.stickfigure.x = 10 + (canvas.offsetHeight * 0.05);
-  configuration.stickfigure.y = canvas.offsetHeight * 0.575;
-  configuration.stickfigure.radius = canvas.offsetHeight * 0.05;
+  configuration.stickfigure.x = 10 + (canvas.height * 0.05);
+  configuration.stickfigure.y = canvas.height * 0.575;
+  configuration.stickfigure.radius = canvas.height * 0.05;
   
-  configuration.ground.y = canvas.offsetHeight * 0.8;
-  configuration.ground.height = canvas.offsetHeight * 0.2;
-  configuration.ground.width = canvas.offsetWidth;
+  configuration.ground.y = canvas.height * 0.8;
+  configuration.ground.height = canvas.height * 0.2;
+  configuration.ground.width = canvas.width;
   
   // Recreate components with updated configuration values
   sky = createSky(context, canvas);
@@ -121,6 +138,32 @@ function resizeCanvas() {
   clouds = createClouds(context, canvas);
   stickfigure = createStickfigure(context, canvas);
   ground = createGround(context, canvas);
+  
+  // Update the game instance if it exists
+  if (window.game) {
+    window.game.components = {
+      sky,
+      sun,
+      clouds,
+      ground,
+      stickfigure
+    };
+    
+    // Restore the worldOffset to maintain scroll position
+    window.game.worldOffset = previousWorldOffset;
+    
+    // Restore walking state
+    window.game.isWalking = wasWalking;
+    if (window.game.components.stickfigure) {
+      window.game.components.stickfigure.isWalking = wasWalking;
+    }
+  }
+  
+  // Update button positions after resizing
+  if (typeof updateButtonPositions === 'function') {
+    updateButtonPositions();
+  }
 }
 
-window.addEventListener("resize", resizeCanvas);
+// Use debounced version for the resize event
+window.addEventListener("resize", debounce(resizeCanvas, 250));

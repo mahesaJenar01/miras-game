@@ -12,6 +12,7 @@ class Game {
     this.worldOffset = 0;
     this.gameSpeed = 2;
     this.isWalking = false;
+    this.animationFrameId = null;
     this.initEventListeners();
   }
 
@@ -23,6 +24,11 @@ class Game {
       if (e.key === "ArrowRight") {
         this.isWalking = true;
         this.components.stickfigure.isWalking = true;
+      } else if (e.key === "ArrowUp" || e.key === " ") {
+        // Add keyboard support for jumping
+        if (this.components.stickfigure && this.components.stickfigure.startJump) {
+          this.components.stickfigure.startJump();
+        }
       }
     });
 
@@ -39,7 +45,10 @@ class Game {
    * and updates the game state.
    */
   animate() {
-    requestAnimationFrame(() => this.animate());
+    // Store reference to 'this' to use in the animation frame
+    const self = this;
+    
+    this.animationFrameId = requestAnimationFrame(() => self.animate());
     this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
     // Draw background elements
@@ -73,7 +82,31 @@ class Game {
    * Starts the game by initiating the animation loop.
    */
   start() {
+    // If there's already an animation frame running, cancel it first
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+    }
+    
     this.animate();
+  }
+  
+  /**
+   * Stops the game animation loop.
+   */
+  stop() {
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+  }
+  
+  /**
+   * Restarts the animation loop with current components.
+   * Used after resizing to ensure we're using updated components.
+   */
+  restart() {
+    this.stop();
+    this.start();
   }
 }
 
@@ -94,4 +127,9 @@ function main() {
   game.start();
 }
 
-main();
+// Only run main() when the DOM is fully loaded
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', main);
+} else {
+  main();
+}
