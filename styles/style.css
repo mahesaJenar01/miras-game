@@ -45,6 +45,15 @@ body {
   
   /* Add some visual feedback on hover */
   transition: all 0.2s ease;
+  
+  /* Prevent text selection */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  
+  /* Prevent touch callout on iOS */
+  -webkit-touch-callout: none;
 }
 
 #controls button:hover {
