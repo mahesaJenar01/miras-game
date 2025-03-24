@@ -77,4 +77,55 @@ body {
 
 #attack-btn {
   background-color: #FFDAC1; /* Light peach */
+  position: relative;
+  overflow: hidden;
+}
+
+/* New styles for the attack button states */
+#attack-btn.attacking {
+  background-color: #FF10F0; /* Bright pink during attack */
+  color: white;
+  box-shadow: 0 0 10px #FF10F0, 0 0 20px #FF10F0; /* Glow effect */
+  animation: pulse 0.5s ease-in-out;
+}
+
+#attack-btn.cooldown {
+  background-color: #c0c0c0; /* Grey during cooldown */
+  transform: scale(0.95);
+  opacity: 0.8;
+  animation: shake 0.3s ease-in-out;
+}
+
+/* Animation for the attack button */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+@keyframes shake {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  50% { transform: translateX(3px); }
+  75% { transform: translateX(-3px); }
+  100% { transform: translateX(0); }
+}
+
+/* Cooldown overlay for the attack button */
+#attack-btn::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.3);
+  transform-origin: bottom;
+  transform: scaleY(0);
+  transition: transform 0.1s linear;
+  pointer-events: none;
+}
+
+#attack-btn.cooldown::after {
+  transform: scaleY(1);
 }

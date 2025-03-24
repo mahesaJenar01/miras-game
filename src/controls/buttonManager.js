@@ -64,19 +64,38 @@ const initializeButtons = () => {
     });
   }
   
-  // Add logic for attack button if needed
+  // Set up attack button events
   if (attackBtn) {
-    attackBtn.addEventListener("mousedown", () => {
-      console.log("Attack button pressed!");
-      // Add attack functionality here
-    });
+    const handleAttack = () => {
+      if (window.game && window.game.attacker) {
+        // Trigger the attack and provide visual feedback on the button
+        if (window.game.attacker.startAttack()) {
+          // Visual feedback for successful attack
+          attackBtn.classList.add('attacking');
+          
+          // Remove the class after the attack animation completes
+          setTimeout(() => {
+            attackBtn.classList.remove('attacking');
+          }, window.game.attacker.attackDuration * (1000 / 60)); // Convert frames to ms
+        } else if (window.game.attacker.attackCooldown > 0) {
+          // Visual feedback for cooldown
+          attackBtn.classList.add('cooldown');
+          setTimeout(() => {
+            attackBtn.classList.remove('cooldown');
+          }, 300);
+        }
+      }
+    };
     
-    attackBtn.addEventListener("touchstart", () => {
-      console.log("Attack button touched!");
-      // Add attack functionality here
-    });
+    // Trigger attack on mouse press
+    attackBtn.addEventListener("mousedown", handleAttack);
+    
+    // Trigger attack on touch start (for mobile devices)
+    attackBtn.addEventListener("touchstart", handleAttack);
   }
 };
 
 // Export the initialization function
 export { initializeButtons };
+
+// Jadi ceritanya attacker-nya itu akuuu, nah kamu si main stick figure itu, tapi character aku terlalu bagus dan kamu terlalu plain ya HAHAHA, kuy kita coba edit character kamu dari Claude juga!
