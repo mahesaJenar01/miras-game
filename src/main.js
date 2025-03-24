@@ -1,6 +1,5 @@
-// ES6 version of main.js
-import { canvas, context, sky, sun, clouds, ground, stickfigure } from './setup.js';
-import { initializeButtons } from './buttonManager.js';
+import { canvas, context, sky, sun, clouds, ground, stickfigure } from './utils/setup.js';
+import { initializeButtons } from './controls/buttonManager.js';
 
 class Game {
   /**

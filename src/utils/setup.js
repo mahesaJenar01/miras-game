@@ -1,4 +1,3 @@
-// ES6 version of setup.js
 // Get canvas and context
 const canvas = document.getElementById("canvas");
 const context = canvas.getContext("2d");
@@ -44,11 +43,11 @@ const configuration = {
 };
 
 // Factory functions for creating each component using ES6 imports
-import Sky from './sky.js';
-import Sun from './sun.js';
-import Cloud from './cloud.js';
-import Stickfigure from './stickfigure.js';
-import Ground from './ground.js';
+import Sky from '../components/sky.js';
+import Sun from '../components/sun.js';
+import Cloud from '../components/cloud.js';
+import Stickfigure from '../components/stickfigure.js';
+import Ground from '../components/ground.js';
 
 const createSky = () => new Sky(context, canvas.width, canvas.height);
 
@@ -163,7 +162,7 @@ const resizeCanvas = () => {
   }
   
   // Import and use updateButtonPositions after resizing
-  import('./controls.js').then(module => {
+  import('../controls/controls.js').then(module => {
     const { updateButtonPositions } = module;
     updateButtonPositions();
   });
