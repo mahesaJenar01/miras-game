@@ -1,5 +1,5 @@
 class Cloud {
-    constructor(context, x, y, size, speed) {
+    constructor(context, x, y, size, speed = 0.1) {
         this.context = context;
         this.x = x;
         this.y = y;
@@ -20,13 +20,17 @@ class Cloud {
     draw() {
         this.update();
         
-        this.context.beginPath();
-        this.context.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        this.context.arc(this.x + this.size * 0.8, this.y - this.size * 0.2, this.size * 0.8, 0, Math.PI * 2);
-        this.context.arc(this.x + this.size * 1.5, this.y, this.size * 0.9, 0, Math.PI * 2);
-        this.context.arc(this.x + this.size * 0.7, this.y + this.size * 0.3, this.size * 0.75, 0, Math.PI * 2);
-        this.context.fillStyle = this.color;
-        this.context.fill();
-        this.context.closePath();
+        const { context, x, y, size, color } = this;
+        
+        context.beginPath();
+        context.arc(x, y, size, 0, Math.PI * 2);
+        context.arc(x + size * 0.8, y - size * 0.2, size * 0.8, 0, Math.PI * 2);
+        context.arc(x + size * 1.5, y, size * 0.9, 0, Math.PI * 2);
+        context.arc(x + size * 0.7, y + size * 0.3, size * 0.75, 0, Math.PI * 2);
+        context.fillStyle = color;
+        context.fill();
+        context.closePath();
     }
 }
+
+export default Cloud;

@@ -12,12 +12,16 @@ class Sky {
     }
 
     draw() {
-        const gradient = this.context.createLinearGradient(0, 0, 0, this.height * 0.8);
-        gradient.addColorStop(0, this.colors.top);
-        gradient.addColorStop(0.5, this.colors.middle);
-        gradient.addColorStop(1, this.colors.bottom);
+        const { context, width, height, colors } = this;
+        const gradient = context.createLinearGradient(0, 0, 0, height * 0.8);
         
-        this.context.fillStyle = gradient;
-        this.context.fillRect(0, 0, this.width, this.height * 0.8);
+        gradient.addColorStop(0, colors.top);
+        gradient.addColorStop(0.5, colors.middle);
+        gradient.addColorStop(1, colors.bottom);
+        
+        context.fillStyle = gradient;
+        context.fillRect(0, 0, width, height * 0.8);
     }
 }
+
+export default Sky;

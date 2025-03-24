@@ -1,7 +1,13 @@
-/* Existing styles */
+/* Updated styles.css */
 * {
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  overflow: hidden;
+  font-family: Arial, sans-serif;
 }
 
 #canvas {
@@ -12,13 +18,15 @@
   transform: translate(-50%, -50%);
 }
 
-/* New styles for controls */
+/* Enhanced styles for controls */
 #controls {
   position: absolute;
   top: 0;
   left: 0;
-  /* no explicit width/height—positions will be set via JS */
+  width: 100%;
+  height: 100%;
   z-index: 10; /* ensures buttons are above the canvas */
+  pointer-events: none; /* This allows clicks to pass through to the canvas */
 }
 
 #controls button {
@@ -27,6 +35,37 @@
   border: none;
   border-radius: 8px;
   font-size: 1em;
+  font-weight: bold;
+  color: #333;
+  padding: 10px;
   font-family: Arial, sans-serif;
   box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+  cursor: pointer;
+  pointer-events: auto; /* Make buttons clickable */
+  
+  /* Add some visual feedback on hover */
+  transition: all 0.2s ease;
+}
+
+#controls button:hover {
+  background-color: #FFA69E; /* slightly darker on hover */
+  transform: scale(1.05);
+}
+
+#controls button:active {
+  background-color: #FF8B8B; /* even darker when pressed */
+  transform: scale(0.95);
+}
+
+/* Specific styling for each button */
+#move-btn {
+  background-color: #B5EAD7; /* Mint green */
+}
+
+#jump-btn {
+  background-color: #C7CEEA; /* Light blue */
+}
+
+#attack-btn {
+  background-color: #FFDAC1; /* Light peach */
 }

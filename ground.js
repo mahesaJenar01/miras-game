@@ -322,3 +322,5 @@ class Ground extends BaseGround {
     }
   }
 }
+
+export default Ground;

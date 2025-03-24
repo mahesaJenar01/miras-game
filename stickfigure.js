@@ -218,3 +218,5 @@ class Stickfigure extends BaseStickfigure {
     }
   }
 }
+
+export default Stickfigure;

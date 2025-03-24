@@ -19,52 +19,56 @@ class Sun {
     draw() {
         this.update();
         
+        const { context, x, y, radius, glowRadius, glowColor, color, rays, rayLength, time } = this;
+        
         // Draw sun glow
-        const gradient = this.context.createRadialGradient(
-            this.x, this.y, this.radius * 0.5,
-            this.x, this.y, this.glowRadius
+        const gradient = context.createRadialGradient(
+            x, y, radius * 0.5,
+            x, y, glowRadius
         );
-        gradient.addColorStop(0, this.glowColor);
+        gradient.addColorStop(0, glowColor);
         gradient.addColorStop(1, "rgba(255, 209, 102, 0)");
         
-        this.context.beginPath();
-        this.context.arc(this.x, this.y, this.glowRadius, 0, Math.PI * 2);
-        this.context.fillStyle = gradient;
-        this.context.fill();
-        this.context.closePath();
+        context.beginPath();
+        context.arc(x, y, glowRadius, 0, Math.PI * 2);
+        context.fillStyle = gradient;
+        context.fill();
+        context.closePath();
         
         // Draw sun rays
-        this.context.save();
-        this.context.translate(this.x, this.y);
-        this.context.rotate(this.time);
+        context.save();
+        context.translate(x, y);
+        context.rotate(time);
         
-        for (let i = 0; i < this.rays; i++) {
-            const angle = (i / this.rays) * Math.PI * 2;
-            const innerRadius = this.radius * 1.1;
-            const outerRadius = this.radius * 1.1 + this.rayLength;
+        for (let i = 0; i < rays; i++) {
+            const angle = (i / rays) * Math.PI * 2;
+            const innerRadius = radius * 1.1;
+            const outerRadius = radius * 1.1 + rayLength;
             
-            this.context.beginPath();
-            this.context.moveTo(
+            context.beginPath();
+            context.moveTo(
                 innerRadius * Math.cos(angle), 
                 innerRadius * Math.sin(angle)
             );
-            this.context.lineTo(
+            context.lineTo(
                 outerRadius * Math.cos(angle), 
                 outerRadius * Math.sin(angle)
             );
-            this.context.strokeStyle = this.color;
-            this.context.lineWidth = 3;
-            this.context.stroke();
-            this.context.closePath();
+            context.strokeStyle = color;
+            context.lineWidth = 3;
+            context.stroke();
+            context.closePath();
         }
         
-        this.context.restore();
+        context.restore();
         
         // Draw sun body
-        this.context.beginPath();
-        this.context.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        this.context.fillStyle = this.color;
-        this.context.fill();
-        this.context.closePath();
+        context.beginPath();
+        context.arc(x, y, radius, 0, Math.PI * 2);
+        context.fillStyle = color;
+        context.fill();
+        context.closePath();
     }
 }
+
+export default Sun;
