@@ -157,20 +157,14 @@ const resizeCanvas = () => {
       window.game.components.stickfigure.isWalking = wasWalking;
     }
     
-    // Update button manager if it exists
-    if (window.game.buttonManager) {
-      window.game.buttonManager.updateButtonPositions();
+    // Update button system if it exists (replaces buttonManager)
+    if (window.game.buttonSystem) {
+      window.game.buttonSystem.updateButtonPositions();
     }
     
     // Restart the game with updated components
     window.game.restart();
   }
-  
-  // Import and use updateButtonPositions after resizing
-  import('../controls/controls.js').then(module => {
-    const { updateButtonPositions } = module;
-    updateButtonPositions();
-  });
 };
 
 // Use debounced version for the resize event
