@@ -3,12 +3,14 @@ import ButtonInputHandler from './ButtonInputHandler.js';
 import MoveButton from './buttons/MoveButton.js';
 import JumpButton from './buttons/JumpButton.js';
 import AttackButton from './buttons/AttackButton.js';
+import eventSystem from '../utils/EventSystem.js';
+import ColorPalette from '../config/ColorPalette.js';
 
 /**
  * ButtonSystem - Central coordinator for all button-related functionality
  * Manages button creation, positioning, and actions
  */
-export default class ButtonSystem {
+class ButtonSystem {
   /**
    * Create a new button system
    * @param {Game} game - Reference to the main Game instance
@@ -38,10 +40,12 @@ export default class ButtonSystem {
    * @returns {Object} Object containing all button instances
    */
   createButtons() {
+    const buttonColors = ColorPalette.buttons;
+    
     return {
-      move: new MoveButton(),
-      jump: new JumpButton(),
-      attack: new AttackButton()
+      move: new MoveButton(0, 0, 100, 50, buttonColors.move.primary, buttonColors.move.hover),
+      jump: new JumpButton(0, 0, 100, 50, buttonColors.jump.primary, buttonColors.jump.hover),
+      attack: new AttackButton(0, 0, 100, 50, buttonColors.attack.primary, buttonColors.attack.hover)
     };
   }
   
@@ -126,32 +130,43 @@ export default class ButtonSystem {
    * @param {boolean} isActive - Whether movement should be active
    */
   triggerMove(isActive) {
-    if (this.game) {
-      this.game.isWalking = isActive;
-      if (this.game.components && this.game.components.stickfigure) {
-        this.game.components.stickfigure.isWalking = isActive;
-      }
-    }
+    eventSystem.publish('move', isActive);
   }
   
   /**
    * Trigger the jump action
    */
   triggerJump() {
-    if (this.game && this.game.components && this.game.components.stickfigure) {
-      this.game.components.stickfigure.startJump();
-    }
+    eventSystem.publish('jump');
   }
   
   /**
    * Trigger the attack action
    */
   triggerAttack() {
-    if (this.game && this.game.attacker) {
-      if (this.game.attacker.startAttack()) {
-        // Could add attack sound or effects here
-        console.log("Attack triggered!");
-      }
+    eventSystem.publish('attack');
+    
+    // Visual feedback for attack button
+    this.buttons.attack.setAttacking(true);
+  }
+  
+  /**
+   * Clean up resources when system is destroyed
+   */
+  destroy() {
+    // Clean up input handler
+    if (this.inputHandler) {
+      this.inputHandler.cleanup();
     }
+    
+    // Clear references
+    this.game = null;
+    this.canvas = null;
+    this.context = null;
+    this.buttons = null;
+    this.renderer = null;
+    this.inputHandler = null;
   }
 }
+
+export default ButtonSystem;
