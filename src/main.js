@@ -1,5 +1,5 @@
+import { ButtonManager } from './components/button.js';
 import { canvas, context, sky, sun, clouds, ground, stickfigure } from './utils/setup.js';
-import { initializeButtons } from './controls/buttonManager.js';
 import Attacker from './components/attacker.js';
 
 class Game {
@@ -20,14 +20,18 @@ class Game {
     
     // Create the attacker instance
     this.attacker = new Attacker(context, components.stickfigure);
+    // Create the button manager for canvas buttons
+    this.buttonManager = new ButtonManager(context, canvas);
     
+    // Initialize event listeners for keyboard and canvas buttons
     this.initEventListeners();
   }
 
   /**
-   * Initializes event listeners for keydown and keyup events.
+   * Initializes event listeners for keyboard and canvas button interactions.
    */
   initEventListeners() {
+    // Keyboard controls
     document.addEventListener("keydown", (e) => {
       if (e.key === "ArrowRight") {
         this.isWalking = true;
@@ -50,6 +54,113 @@ class Game {
         this.components.stickfigure.isWalking = false;
       }
     });
+    
+    // Canvas button controls - mouse events
+    this.canvas.addEventListener("mousedown", (e) => {
+      this.handleCanvasClick(e.clientX, e.clientY, true);
+    });
+    
+    this.canvas.addEventListener("mouseup", (e) => {
+      this.handleCanvasClick(e.clientX, e.clientY, false);
+    });
+    
+    this.canvas.addEventListener("mousemove", (e) => {
+      this.handleCanvasHover(e.clientX, e.clientY);
+    });
+    
+    // Canvas button controls - touch events for mobile
+    this.canvas.addEventListener("touchstart", (e) => {
+      const touch = e.touches[0];
+      this.handleCanvasClick(touch.clientX, touch.clientY, true);
+      // Prevent default to avoid scrolling/zooming
+      e.preventDefault();
+    });
+    
+    this.canvas.addEventListener("touchend", (e) => {
+      const touch = e.changedTouches[0];
+      this.handleCanvasClick(touch.clientX, touch.clientY, false);
+      // Prevent default to avoid scrolling/zooming
+      e.preventDefault();
+    });
+  }
+  
+  /**
+   * Handle canvas clicks for button interaction.
+   * @param {number} clientX - Client X coordinate.
+   * @param {number} clientY - Client Y coordinate.
+   * @param {boolean} isDown - Whether the mouse/touch is down.
+   */
+  handleCanvasClick(clientX, clientY, isDown) {
+    // Convert client coordinates to canvas coordinates
+    const rect = this.canvas.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    
+    // Check if any button was clicked
+    const { move, jump, attack } = this.buttonManager.buttons;
+    
+    // Handle Move button
+    if (this.isPointInButton(x, y, move)) {
+      move.setPressed(isDown);
+      if (isDown) {
+        this.isWalking = true;
+        this.components.stickfigure.isWalking = true;
+      } else {
+        this.isWalking = false;
+        this.components.stickfigure.isWalking = false;
+      }
+    }
+    
+    // Handle Jump button
+    if (this.isPointInButton(x, y, jump) && isDown) {
+      jump.setPressed(true);
+      setTimeout(() => jump.setPressed(false), 100); // Visual feedback
+      const { stickfigure } = this.components;
+      if (stickfigure && stickfigure.startJump) {
+        stickfigure.startJump();
+      }
+    }
+    
+    // Handle Attack button
+    if (this.isPointInButton(x, y, attack) && isDown) {
+      attack.setPressed(true);
+      setTimeout(() => attack.setPressed(false), 100); // Visual feedback
+      this.triggerAttack();
+    }
+  }
+  
+  /**
+   * Handle hover effects for buttons.
+   * @param {number} clientX - Client X coordinate.
+   * @param {number} clientY - Client Y coordinate.
+   */
+  handleCanvasHover(clientX, clientY) {
+    // Convert client coordinates to canvas coordinates
+    const rect = this.canvas.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    
+    // Update hover state for all buttons
+    Object.values(this.buttonManager.buttons).forEach(button => {
+      button.setHovered(this.isPointInButton(x, y, button));
+    });
+  }
+  
+  /**
+   * Check if a point is inside a button.
+   * @param {number} x - X coordinate.
+   * @param {number} y - Y coordinate.
+   * @param {object} button - Button object to check.
+   * @returns {boolean} Whether the point is inside the button.
+   */
+  isPointInButton(x, y, button) {
+    if (!button) return false;
+    return (
+      x >= button.x &&
+      x <= button.x + button.width &&
+      y >= button.y &&
+      y <= button.y + button.height
+    );
   }
 
   /**
@@ -107,6 +218,9 @@ class Game {
     if (this.isWalking) {
       this.worldOffset += this.gameSpeed;
     }
+
+    // Draw buttons
+    this.buttonManager.draw();
   }
   
   /**
@@ -116,38 +230,11 @@ class Game {
     if (!this.attacker) return;
     
     const cooldownPercent = this.attacker.getCooldownPercentage();
-    if (cooldownPercent > 0) {
-      // Get the attack button position
-      const attackBtn = document.getElementById("attack-btn");
-      if (!attackBtn) return;
-      
-      const rect = attackBtn.getBoundingClientRect();
-      const canvasRect = this.canvas.getBoundingClientRect();
-      
-      // Convert screen coordinates to canvas coordinates
-      const x = rect.left - canvasRect.left + rect.width / 2;
-      const y = rect.top - canvasRect.top - 10; // 10px above the button
-      
-      // Draw circular cooldown indicator
-      const radius = 15;
-      const startAngle = -Math.PI / 2;
-      const endAngle = startAngle + (1 - cooldownPercent) * Math.PI * 2;
-      
-      this.context.beginPath();
-      this.context.arc(x, y, radius, startAngle, startAngle + Math.PI * 2);
-      this.context.fillStyle = "rgba(0, 0, 0, 0.3)";
-      this.context.fill();
-      this.context.closePath();
-      
-      this.context.beginPath();
-      this.context.moveTo(x, y);
-      this.context.arc(x, y, radius, startAngle, endAngle);
-      this.context.lineTo(x, y);
-      this.context.fillStyle = "#4CAF50"; // Green
-      this.context.fill();
-      this.context.closePath();
+    if (cooldownPercent > 0 && this.buttonManager) {
+      // Update the attack button cooldown visualization
+      this.buttonManager.updateAttackCooldown(cooldownPercent);
     }
-  }
+  }  
 
   /**
    * Starts the game by initiating the animation loop.
@@ -179,6 +266,8 @@ class Game {
     this.stop();
     // Recreate the attacker when restarting to ensure it uses the updated stickfigure
     this.attacker = new Attacker(this.context, this.components.stickfigure);
+    // Completely recreate the ButtonManager for proper scaling
+    this.buttonManager = new ButtonManager(this.context, this.canvas);
     this.start();
   }
 }
@@ -196,9 +285,6 @@ const main = () => {
   
   // Expose the game instance globally so that other scripts can access it
   window.game = game;
-  
-  // Initialize all buttons and their handlers
-  initializeButtons();
   
   // Start the game
   game.start();

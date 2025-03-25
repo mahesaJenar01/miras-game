@@ -157,6 +157,11 @@ const resizeCanvas = () => {
       window.game.components.stickfigure.isWalking = wasWalking;
     }
     
+    // Update button manager if it exists
+    if (window.game.buttonManager) {
+      window.game.buttonManager.updateButtonPositions();
+    }
+    
     // Restart the game with updated components
     window.game.restart();
   }
