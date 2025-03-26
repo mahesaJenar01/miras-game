@@ -1,10 +1,10 @@
 /**
  * setup.js - Sets up canvas and creates modular scene and characters
- * Updated to use the new Scene module structure
+ * Updated to use the new modular character structure
  */
 import { createSceneConfig, updateConfigForResize } from '../scene/config.js';
 import Scene from '../scene/Scene.js';
-import Stickfigure from '../components/stickfigure.js';
+import StickFigure from '../components/character/StickFigure.js';
 
 // Get canvas and context
 const canvas = document.getElementById("canvas");
@@ -49,7 +49,7 @@ const createScene = () => {
 
 const createStickfigure = () => {
   const { x, y, color, tickness, radius } = configuration.stickfigure;
-  return new Stickfigure(context, x, y, color, tickness, radius);
+  return new StickFigure(context, x, y, color, tickness, radius);
 };
 
 // Create game components using the factory functions

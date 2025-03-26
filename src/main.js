@@ -1,10 +1,10 @@
 /**
  * main.js - Main game entry point
- * Updated to use the modular scene system
+ * Updated to use the modular character system
  */
 import ButtonSystem from './controls/ButtonSystem.js';
 import { canvas, context, scene, stickfigure } from './utils/setup.js';
-import Attacker from './components/attacker.js';
+import Attacker from './components/character/Attacker.js';
 
 class Game {
   /**
@@ -43,6 +43,11 @@ class Game {
     scene.update(this.worldOffset);
     scene.draw(this.worldOffset);
 
+    // Update stickfigure
+    if (stickfigure.update) {
+      stickfigure.update();
+    }
+    
     // Update jump physics for the stickfigure before drawing
     if (stickfigure.updateJump) {
       stickfigure.updateJump();
@@ -60,6 +65,16 @@ class Game {
     // Update world offset if the stickfigure is walking
     if (this.isWalking) {
       this.worldOffset += this.gameSpeed;
+      
+      // Ensure stickfigure walking state is synchronized
+      if (this.components.stickfigure && !this.components.stickfigure.isWalking) {
+        this.components.stickfigure.isWalking = true;
+      }
+    } else {
+      // Ensure stickfigure walking state is synchronized
+      if (this.components.stickfigure && this.components.stickfigure.isWalking) {
+        this.components.stickfigure.isWalking = false;
+      }
     }
 
     // Draw buttons using the button system
