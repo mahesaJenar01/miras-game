@@ -1,3 +1,11 @@
+/**
+ * setup.js - Sets up canvas and creates modular scene and characters
+ * Updated to use the new Scene module structure
+ */
+import { createSceneConfig, updateConfigForResize } from '../scene/config.js';
+import Scene from '../scene/Scene.js';
+import Stickfigure from '../components/stickfigure.js';
+
 // Get canvas and context
 const canvas = document.getElementById("canvas");
 const context = canvas.getContext("2d");
@@ -8,58 +16,35 @@ const setCanvasSize = () => {
   canvas.height = window.innerHeight * 0.9;
 };
 
+// Initial canvas setup
 setCanvasSize();
 
-// Configuration object holding layout and sizing data for each component
-const configuration = {
-  sky: {
-    width: canvas.width,
-    height: canvas.height
-  },
-  sun: {
-    x: canvas.width * 0.75,
-    y: canvas.height * 0.2,
-    radius: canvas.height * 0.06
-  },
-  clouds: [
-    { x: canvas.width * 0.1, y: canvas.height * 0.15, size: canvas.height * 0.03, speed: 0.1 },
-    { x: canvas.width * 0.3, y: canvas.height * 0.25, size: canvas.height * 0.04, speed: 0.05 },
-    { x: canvas.width * 0.6, y: canvas.height * 0.1, size: canvas.height * 0.035, speed: 0.07 },
-    { x: canvas.width * 0.8, y: canvas.height * 0.3, size: canvas.height * 0.025, speed: 0.12 }
-  ],
-  stickfigure: {
+// Create configuration for components using dimensions
+const createConfiguration = () => {
+  // Create scene configuration
+  const sceneConfig = createSceneConfig(canvas.width, canvas.height);
+  
+  // Character configuration (stickfigure)
+  const stickfigureConfig = {
     x: 10 + (canvas.height * 0.05),
     y: canvas.height * 0.575,
     color: "#FF69B4", // Hot pink for a girly look
     tickness: 3,
     radius: canvas.height * 0.05
-  },
-  ground: {
-    x: 0,
-    y: canvas.height * 0.8,
-    height: canvas.height * 0.2,
-    width: canvas.width
-  }
+  };
+  
+  return {
+    scene: sceneConfig,
+    stickfigure: stickfigureConfig
+  };
 };
 
-// Factory functions for creating each component using ES6 imports
-import Sky from '../components/sky.js';
-import Sun from '../components/sun.js';
-import Cloud from '../components/cloud.js';
-import Stickfigure from '../components/stickfigure.js';
-import Ground from '../components/ground.js';
+// Initialize configuration
+let configuration = createConfiguration();
 
-const createSky = () => new Sky(context, canvas.width, canvas.height);
-
-const createSun = () => {
-  const { x, y, radius } = configuration.sun;
-  return new Sun(context, x, y, radius);
-};
-
-const createClouds = () => {
-  return configuration.clouds.map(({ x, y, size, speed }) => 
-    new Cloud(context, x, y, size, speed)
-  );
+// Factory functions for creating components
+const createScene = () => {
+  return new Scene(context, canvas, configuration.scene);
 };
 
 const createStickfigure = () => {
@@ -67,17 +52,9 @@ const createStickfigure = () => {
   return new Stickfigure(context, x, y, color, tickness, radius);
 };
 
-const createGround = () => {
-  const { x, y, height, width } = configuration.ground;
-  return new Ground(context, x, y, height, width);
-};
-
 // Create game components using the factory functions
-let sky = createSky();
-let sun = createSun();
-let clouds = createClouds();
+let scene = createScene();
 let stickfigure = createStickfigure();
-let ground = createGround();
 
 // Debounce function to prevent multiple rapid resize events
 const debounce = (func, wait) => {
@@ -98,55 +75,31 @@ const resizeCanvas = () => {
   const previousWorldOffset = window.game ? window.game.worldOffset : 0;
   const wasWalking = window.game ? window.game.isWalking : false;
   
+  // Resize canvas
   setCanvasSize();
   
-  // Update configuration values based on the new canvas size
-  Object.assign(configuration.sky, {
-    width: canvas.width,
-    height: canvas.height
-  });
+  // Update configuration based on new dimensions
+  configuration = {
+    scene: updateConfigForResize(configuration.scene, canvas.width, canvas.height),
+    stickfigure: {
+      x: 10 + (canvas.height * 0.05),
+      y: canvas.height * 0.575,
+      color: "#FF69B4",
+      tickness: 3,
+      radius: canvas.height * 0.05
+    }
+  };
   
-  Object.assign(configuration.sun, {
-    x: canvas.width * 0.75,
-    y: canvas.height * 0.2,
-    radius: canvas.height * 0.06
-  });
-  
-  configuration.clouds = [
-    { x: canvas.width * 0.1, y: canvas.height * 0.15, size: canvas.height * 0.03, speed: 0.1 },
-    { x: canvas.width * 0.3, y: canvas.height * 0.25, size: canvas.height * 0.04, speed: 0.05 },
-    { x: canvas.width * 0.6, y: canvas.height * 0.1, size: canvas.height * 0.035, speed: 0.07 },
-    { x: canvas.width * 0.8, y: canvas.height * 0.3, size: canvas.height * 0.025, speed: 0.12 }
-  ];
-  
-  Object.assign(configuration.stickfigure, {
-    x: 10 + (canvas.height * 0.05),
-    y: canvas.height * 0.575,
-    radius: canvas.height * 0.05
-  });
-  
-  Object.assign(configuration.ground, {
-    y: canvas.height * 0.8,
-    height: canvas.height * 0.2,
-    width: canvas.width
-  });
-  
-  // Recreate components with updated configuration values
-  sky = createSky();
-  sun = createSun();
-  clouds = createClouds();
+  // Recreate components with updated configuration
+  scene = createScene();
   stickfigure = createStickfigure();
-  ground = createGround();
   
   // Update the game instance if it exists
   if (window.game) {
-    window.game.components = {
-      sky,
-      sun,
-      clouds,
-      ground,
+    window.game.setComponents({
+      scene,
       stickfigure
-    };
+    });
     
     // Restore the worldOffset to maintain scroll position
     window.game.worldOffset = previousWorldOffset;
@@ -157,7 +110,7 @@ const resizeCanvas = () => {
       window.game.components.stickfigure.isWalking = wasWalking;
     }
     
-    // Update button system if it exists (replaces buttonManager)
+    // Update button system if it exists
     if (window.game.buttonSystem) {
       window.game.buttonSystem.updateButtonPositions();
     }
@@ -174,10 +127,7 @@ window.addEventListener("resize", debounce(resizeCanvas, 250));
 export { 
   canvas, 
   context, 
-  sky, 
-  sun, 
-  clouds, 
-  ground, 
+  scene, 
   stickfigure,
   configuration
 };
