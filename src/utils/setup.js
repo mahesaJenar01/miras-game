@@ -1,10 +1,12 @@
 /**
  * setup.js - Sets up canvas and creates modular scene and characters
- * Updated to use the new modular character structure
+ * Updated to use the event system
  */
 import { createSceneConfig, updateConfigForResize } from '../scene/config.js';
 import Scene from '../scene/Scene.js';
 import StickFigure from '../components/character/StickFigure.js';
+import GameEvents from '../events/GameEvents.js';
+import { GAME_EVENTS } from '../events/EventTypes.js';
 
 // Get canvas and context
 const canvas = document.getElementById("canvas");
@@ -90,6 +92,14 @@ const resizeCanvas = () => {
     }
   };
   
+  // Emit resize event before creating new components
+  GameEvents.emitGame(GAME_EVENTS.RESIZE, {
+    width: canvas.width,
+    height: canvas.height,
+    config: configuration,
+    radius: configuration.stickfigure.radius
+  });
+  
   // Recreate components with updated configuration
   scene = createScene();
   stickfigure = createStickfigure();
@@ -104,15 +114,17 @@ const resizeCanvas = () => {
     // Restore the worldOffset to maintain scroll position
     window.game.worldOffset = previousWorldOffset;
     
-    // Restore walking state
-    window.game.isWalking = wasWalking;
-    if (window.game.components.stickfigure) {
-      window.game.components.stickfigure.isWalking = wasWalking;
-    }
+    // Emit world update event with restored offset
+    GameEvents.emitGame(GAME_EVENTS.WORLD_UPDATE, {
+      worldOffset: previousWorldOffset
+    });
     
-    // Update button system if it exists
-    if (window.game.buttonSystem) {
-      window.game.buttonSystem.updateButtonPositions();
+    // Restore walking state
+    if (wasWalking) {
+      window.game.isWalking = true;
+      if (window.game.components.stickfigure) {
+        window.game.components.stickfigure.isWalking = true;
+      }
     }
     
     // Restart the game with updated components

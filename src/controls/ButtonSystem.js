@@ -3,10 +3,12 @@ import ButtonInputHandler from './ButtonInputHandler.js';
 import MoveButton from './buttons/MoveButton.js';
 import JumpButton from './buttons/JumpButton.js';
 import AttackButton from './buttons/AttackButton.js';
+import GameEvents from '../events/GameEvents.js';
+import { INPUT_EVENTS, CHARACTER_EVENTS, UI_EVENTS } from '../events/EventTypes.js';
 
 /**
  * ButtonSystem - Central coordinator for all button-related functionality
- * Manages button creation, positioning, and actions
+ * Manages button creation, positioning, and actions using the event system
  */
 export default class ButtonSystem {
   /**
@@ -31,6 +33,96 @@ export default class ButtonSystem {
     
     // Setup the system
     this.setupSystem();
+    
+    // Register event listeners
+    this.registerEventListeners();
+  }
+  
+  /**
+   * Register event listeners for button actions
+   */
+  registerEventListeners() {
+    // Listen for button press events
+    GameEvents.on(INPUT_EVENTS.BUTTON_PRESS, (data) => {
+      const { buttonKey } = data;
+      
+      // Trigger the appropriate action based on the button
+      if (buttonKey === 'move') {
+        this.handleMoveButtonPress();
+      } else if (buttonKey === 'jump') {
+        this.handleJumpButtonPress();
+      } else if (buttonKey === 'attack') {
+        this.handleAttackButtonPress();
+      }
+    });
+    
+    // Listen for button release events
+    GameEvents.on(INPUT_EVENTS.BUTTON_RELEASE, (data) => {
+      const { buttonKey } = data;
+      
+      // Handle button release actions
+      if (buttonKey === 'move') {
+        this.handleMoveButtonRelease();
+      }
+      // Jump and attack don't need special release handling
+    });
+    
+    // Listen for cooldown updates to reflect in the UI
+    GameEvents.on(CHARACTER_EVENTS.COOLDOWN_UPDATE, (data) => {
+      const { cooldownPercent } = data;
+      this.buttons.attack.setCooldown(cooldownPercent);
+      
+      // Also emit a UI event for the button cooldown
+      GameEvents.emitUI(UI_EVENTS.BUTTON_COOLDOWN_UPDATE, {
+        buttonKey: 'attack',
+        cooldownPercent
+      });
+    });
+    
+    // Listen for attack state changes to update visual feedback
+    GameEvents.on(CHARACTER_EVENTS.ATTACK_START, () => {
+      this.buttons.attack.setAttacking(true);
+    });
+    
+    GameEvents.on(CHARACTER_EVENTS.ATTACK_END, () => {
+      this.buttons.attack.setAttacking(false);
+    });
+  }
+  
+  /**
+   * Handle move button press
+   */
+  handleMoveButtonPress() {
+    // Emit character movement start event
+    GameEvents.emitCharacter(CHARACTER_EVENTS.MOVE_START, {
+      direction: 'right' // Since this game only moves right
+    });
+  }
+  
+  /**
+   * Handle move button release
+   */
+  handleMoveButtonRelease() {
+    // Emit character movement stop event
+    GameEvents.emitCharacter(CHARACTER_EVENTS.MOVE_STOP, {
+      direction: 'right' // Since this game only moves right
+    });
+  }
+  
+  /**
+   * Handle jump button press
+   */
+  handleJumpButtonPress() {
+    // Emit character jump start event
+    GameEvents.emitCharacter(CHARACTER_EVENTS.JUMP_START, {});
+  }
+  
+  /**
+   * Handle attack button press
+   */
+  handleAttackButtonPress() {
+    // Emit character attack start event
+    GameEvents.emitCharacter(CHARACTER_EVENTS.ATTACK_START, {});
   }
   
   /**
@@ -104,6 +196,16 @@ export default class ButtonSystem {
       btnWidth,
       btnHeight
     );
+    
+    // Emit UI update event
+    GameEvents.emitUI(UI_EVENTS.UPDATE, {
+      type: 'button_positions',
+      buttons: {
+        move: { x: this.buttons.move.x, y: this.buttons.move.y, width: btnWidth, height: btnHeight },
+        jump: { x: this.buttons.jump.x, y: this.buttons.jump.y, width: btnWidth, height: btnHeight },
+        attack: { x: this.buttons.attack.x, y: this.buttons.attack.y, width: btnWidth, height: btnHeight }
+      }
+    });
   }
   
   /**
@@ -117,41 +219,57 @@ export default class ButtonSystem {
       const cooldownPercent = this.game.attacker.getCooldownPercentage();
       if (cooldownPercent > 0) {
         this.buttons.attack.setCooldown(cooldownPercent);
+        
+        // Emit cooldown update event
+        GameEvents.emitCharacter(CHARACTER_EVENTS.COOLDOWN_UPDATE, {
+          cooldownPercent
+        });
       }
     }
   }
   
   /**
-   * Trigger the move action
+   * Trigger the move action (will be deprecated in favor of events)
    * @param {boolean} isActive - Whether movement should be active
    */
   triggerMove(isActive) {
-    if (this.game) {
-      this.game.isWalking = isActive;
-      if (this.game.components && this.game.components.stickfigure) {
-        this.game.components.stickfigure.isWalking = isActive;
-      }
+    // For backward compatibility - emit events instead of direct calls
+    if (isActive) {
+      GameEvents.emitCharacter(CHARACTER_EVENTS.MOVE_START, {
+        direction: 'right'
+      });
+    } else {
+      GameEvents.emitCharacter(CHARACTER_EVENTS.MOVE_STOP, {
+        direction: 'right'
+      });
     }
   }
   
   /**
-   * Trigger the jump action
+   * Trigger the jump action (will be deprecated in favor of events)
    */
   triggerJump() {
-    if (this.game && this.game.components && this.game.components.stickfigure) {
-      this.game.components.stickfigure.startJump();
-    }
+    // For backward compatibility - emit an event instead of direct call
+    GameEvents.emitCharacter(CHARACTER_EVENTS.JUMP_START, {});
   }
   
   /**
-   * Trigger the attack action
+   * Trigger the attack action (will be deprecated in favor of events)
    */
   triggerAttack() {
-    if (this.game && this.game.attacker) {
-      if (this.game.attacker.startAttack()) {
-        // Could add attack sound or effects here
-        console.log("Attack triggered!");
-      }
-    }
+    // For backward compatibility - emit an event instead of direct call
+    GameEvents.emitCharacter(CHARACTER_EVENTS.ATTACK_START, {});
+  }
+  
+  /**
+   * Clean up all event listeners when the system is destroyed
+   */
+  cleanup() {
+    // Clean up input handler
+    this.inputHandler.cleanup();
+    
+    // Remove all event listeners from GameEvents
+    // Note: In a real implementation, you would keep track of listeners and remove them specifically
+    // This is a simplified example
   }
 }

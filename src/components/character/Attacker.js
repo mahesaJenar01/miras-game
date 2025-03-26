@@ -1,6 +1,7 @@
 /**
  * Attacker.js - Implementation of the heroic attacker character
  * Extends the base Character class with specific configurations
+ * Updated to use the event system
  */
 import Character from './base/Character.js';
 import CharacterAnimator from './CharacterAnimator.js';
@@ -9,6 +10,8 @@ import ParticleSystem from './effects/ParticleSystem.js';
 import Cape from './accessories/Cape.js';
 import Shield from './accessories/Shield.js';
 import Sword from './accessories/Sword.js';
+import GameEvents from '../../events/GameEvents.js';
+import { CHARACTER_EVENTS, GAME_EVENTS } from '../../events/EventTypes.js';
 
 class Attacker extends Character {
   /**
@@ -64,6 +67,60 @@ class Attacker extends Character {
     
     // Add accessories
     this.addAccessories();
+    
+    // Register event listeners
+    this.registerEventListeners();
+  }
+  
+  /**
+   * Register event listeners for attacker behavior
+   */
+  registerEventListeners() {
+    // Listen for character position updates to maintain relative position
+    GameEvents.on(CHARACTER_EVENTS.POSITION_CHANGE, (data) => {
+      if (data.character === 'stickfigure') {
+        // Update position relative to main character
+        this.updatePositionFromEvent(data.x, data.y);
+      }
+    });
+    
+    // Listen for attack commands
+    GameEvents.on(CHARACTER_EVENTS.ATTACK_START, () => {
+      this.startAttack();
+    });
+    
+    // Listen for game resize events
+    GameEvents.on(GAME_EVENTS.RESIZE, () => {
+      // Update any size-dependent properties
+      this.updateForResize();
+    });
+  }
+  
+  /**
+   * Clean up event listeners when the attacker is destroyed
+   */
+  cleanup() {
+    // In a real implementation, we would keep references to listeners
+    // and remove them specifically, but this is a simplified example
+  }
+  
+  /**
+   * Update position based on stickfigure position event
+   * @param {number} stickfigureX - Main character X position
+   * @param {number} stickfigureY - Main character Y position
+   */
+  updatePositionFromEvent(stickfigureX, stickfigureY) {
+    this.x = stickfigureX + this.xOffset;
+    this.y = stickfigureY + this.yOffset;
+  }
+  
+  /**
+   * Update any size-dependent properties after a resize
+   */
+  updateForResize() {
+    // Recalculate attacker properties based on stickfigure
+    this.xOffset = this.stickfigure.config.radius * 3;
+    this.attackRange = this.stickfigure.config.radius * 15;
   }
   
   /**
@@ -88,7 +145,17 @@ class Attacker extends Character {
    * @returns {boolean} Whether the attack was started
    */
   startAttack() {
-    return this.animator.startAttack();
+    const result = this.animator.startAttack();
+    
+    if (result) {
+      // Emit attack start event with attacker info
+      GameEvents.emitCharacter(CHARACTER_EVENTS.ATTACK_START, {
+        attacker: this,
+        range: this.attackRange
+      });
+    }
+    
+    return result;
   }
   
   /**
@@ -105,7 +172,22 @@ class Attacker extends Character {
     this.particleSystem.update();
     
     // Update attack state
+    const wasAttacking = this.isAttacking;
     this.isAttacking = this.animator.isAttacking;
+    
+    // Emit events on attack state changes
+    if (!wasAttacking && this.isAttacking) {
+      // Attack just started
+      GameEvents.emitCharacter(CHARACTER_EVENTS.ATTACK_START, {
+        attacker: this,
+        range: this.attackRange
+      });
+    } else if (wasAttacking && !this.isAttacking) {
+      // Attack just ended
+      GameEvents.emitCharacter(CHARACTER_EVENTS.ATTACK_END, {
+        attacker: this
+      });
+    }
   }
   
   /**
@@ -136,6 +218,17 @@ class Attacker extends Character {
       
       // Apply forward movement
       this.x += forwardStep;
+      
+      // Emit position update at key animation points
+      if (attackProgress > 0 && attackProgress < 0.1) {
+        GameEvents.emitCharacter(CHARACTER_EVENTS.POSITION_CHANGE, {
+          character: 'attacker',
+          x: this.x,
+          y: this.y,
+          state: 'attacking',
+          progress: attackProgress
+        });
+      }
     }
   }
   
@@ -180,6 +273,16 @@ class Attacker extends Character {
     });
     
     this.context.restore();
+    
+    // If attack just hit the peak, emit a hit event
+    if (attackProgress > 0.49 && attackProgress < 0.51) {
+      GameEvents.emitCharacter(CHARACTER_EVENTS.ATTACK_HIT, {
+        attacker: this,
+        x: this.x,
+        y: this.y,
+        hitbox: this.getAttackHitbox()
+      });
+    }
   }
   
   /**
@@ -206,7 +309,14 @@ class Attacker extends Character {
    * @returns {number} Cooldown percentage (0-1)
    */
   getCooldownPercentage() {
-    return this.animator.getCooldownPercentage();
+    const cooldownPercentage = this.animator.getCooldownPercentage();
+    
+    // Emit cooldown update event
+    GameEvents.emitCharacter(CHARACTER_EVENTS.COOLDOWN_UPDATE, {
+      cooldownPercent: cooldownPercentage
+    });
+    
+    return cooldownPercentage;
   }
 }
 

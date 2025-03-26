@@ -1,12 +1,15 @@
 /**
  * Scene.js - Main container for all scene elements
  * Encapsulates sky, sun, clouds, ground and their interactions
+ * Updated to use the event system
  */
 import SceneManager from './SceneManager.js';
 import Sky from './components/Sky.js';
 import Sun from './components/Sun.js';
 import Cloud from './components/Cloud.js';
 import Ground from './components/Ground.js';
+import GameEvents from '../events/GameEvents.js';
+import { SCENE_EVENTS, GAME_EVENTS } from '../events/EventTypes.js';
 
 class Scene {
   /**
@@ -25,6 +28,57 @@ class Scene {
     
     // Create scene manager to handle updates and drawing
     this.manager = new SceneManager(this);
+    
+    // Register event listeners
+    this.registerEventListeners();
+  }
+  
+  /**
+   * Register event listeners for scene interactions
+   */
+  registerEventListeners() {
+    // Listen for world updates to update parallax
+    GameEvents.on(GAME_EVENTS.WORLD_UPDATE, (data) => {
+      this.handleWorldUpdate(data.worldOffset);
+    });
+    
+    // Listen for resize events
+    GameEvents.on(GAME_EVENTS.RESIZE, (data) => {
+      const { width, height, config } = data;
+      if (width && height && config) {
+        this.resize(width, height, config);
+      }
+    });
+    
+    // Listen for scene effect requests
+    GameEvents.on(SCENE_EVENTS.EFFECT_START, (data) => {
+      const { effect, options } = data;
+      if (effect && this.manager) {
+        this.manager.applyEffect(effect, options);
+      }
+    });
+  }
+  
+  /**
+   * Clean up event listeners
+   */
+  cleanup() {
+    // In a real implementation, we would keep references to listeners
+    // and remove them specifically, but this is a simplified example
+  }
+  
+  /**
+   * Handle world update events for parallax scrolling
+   * @param {number} worldOffset - The updated world offset
+   */
+  handleWorldUpdate(worldOffset) {
+    // Store the world offset for drawing
+    this.currentWorldOffset = worldOffset;
+    
+    // Emit scene update event
+    GameEvents.emitScene(SCENE_EVENTS.PARALLAX_UPDATE, {
+      worldOffset
+    });
   }
   
   /**
@@ -63,6 +117,9 @@ class Scene {
       config.ground.height,
       config.ground.width
     );
+    
+    // Initialize world offset
+    this.currentWorldOffset = 0;
   }
   
   /**
@@ -70,6 +127,10 @@ class Scene {
    * @param {number} worldOffset - The current world offset for parallax
    */
   update(worldOffset) {
+    // Store the world offset for drawing
+    this.currentWorldOffset = worldOffset;
+    
+    // Update components via the manager
     this.manager.update(worldOffset);
   }
   
@@ -78,7 +139,11 @@ class Scene {
    * @param {number} worldOffset - The current world offset for parallax
    */
   draw(worldOffset) {
-    this.manager.draw(worldOffset);
+    // Use the stored world offset if none provided
+    const offset = worldOffset !== undefined ? worldOffset : this.currentWorldOffset;
+    
+    // Draw components via the manager
+    this.manager.draw(offset);
   }
   
   /**
@@ -89,6 +154,13 @@ class Scene {
    */
   resize(width, height, config) {
     this.config = config;
+    
+    // Emit scene update event before reinitializing
+    GameEvents.emitScene(SCENE_EVENTS.SCENERY_UPDATE, {
+      width,
+      height,
+      config
+    });
     
     // Reinitialize components with new dimensions
     this.initialize();
@@ -105,6 +177,23 @@ class Scene {
       clouds: this.clouds,
       ground: this.ground
     };
+  }
+  
+  /**
+   * Apply a scene effect (delegated to SceneManager)
+   * @param {string} effect - Effect type
+   * @param {Object} options - Effect parameters
+   */
+  applyEffect(effect, options = {}) {
+    if (this.manager) {
+      this.manager.applyEffect(effect, options);
+      
+      // Emit effect start event
+      GameEvents.emitScene(SCENE_EVENTS.EFFECT_START, {
+        effect,
+        options
+      });
+    }
   }
 }
 

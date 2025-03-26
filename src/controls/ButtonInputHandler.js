@@ -1,7 +1,10 @@
 /**
  * ButtonInputHandler - Centralizes all input handling for buttons
- * Manages mouse, touch, and keyboard interactions
+ * Manages mouse, touch, and keyboard interactions using the event system
  */
+import GameEvents from '../events/GameEvents.js';
+import { INPUT_EVENTS } from '../events/EventTypes.js';
+
 export default class ButtonInputHandler {
     /**
      * Create a new button input handler
@@ -97,17 +100,19 @@ export default class ButtonInputHandler {
       const { x, y } = this.getCanvasCoordinates(e.clientX, e.clientY);
       const target = this.findTargetButton(x, y);
       
+      // Emit the general mouse down event
+      GameEvents.emitInput(INPUT_EVENTS.MOUSE_DOWN, { x, y, originalEvent: e });
+      
       if (target) {
         target.button.setPressed(true);
         
-        // Execute button-specific press action
-        if (target.key === 'move') {
-          this.buttonSystem.triggerMove(true);
-        } else if (target.key === 'jump') {
-          this.buttonSystem.triggerJump();
-        } else if (target.key === 'attack') {
-          this.buttonSystem.triggerAttack();
-        }
+        // Emit button-specific press event
+        GameEvents.emitInput(INPUT_EVENTS.BUTTON_PRESS, {
+          buttonKey: target.key,
+          button: target.button,
+          x, y,
+          originalEvent: e
+        });
       }
     }
     
@@ -116,19 +121,24 @@ export default class ButtonInputHandler {
      * @param {MouseEvent} e - Mouse event
      */
     handleMouseUp(e) {
-      // For move button, we need to stop walking when released
-      if (this.buttons.move.isPressed) {
-        this.buttons.move.setPressed(false);
-        this.buttonSystem.triggerMove(false);
-      }
+      const { x, y } = this.getCanvasCoordinates(e.clientX, e.clientY);
       
-      // For other buttons, just update their visual state
-      if (this.buttons.jump.isPressed) {
-        this.buttons.jump.setPressed(false);
-      }
+      // Emit the general mouse up event
+      GameEvents.emitInput(INPUT_EVENTS.MOUSE_UP, { x, y, originalEvent: e });
       
-      if (this.buttons.attack.isPressed) {
-        this.buttons.attack.setPressed(false);
+      // Check all buttons that might be pressed
+      for (const [key, button] of Object.entries(this.buttons)) {
+        if (button.isPressed) {
+          button.setPressed(false);
+          
+          // Emit button-specific release event
+          GameEvents.emitInput(INPUT_EVENTS.BUTTON_RELEASE, {
+            buttonKey: key,
+            button: button,
+            x, y,
+            originalEvent: e
+          });
+        }
       }
     }
     
@@ -139,9 +149,26 @@ export default class ButtonInputHandler {
     handleMouseMove(e) {
       const { x, y } = this.getCanvasCoordinates(e.clientX, e.clientY);
       
-      // Update hover state for all buttons
-      Object.values(this.buttons).forEach(button => {
-        button.setHovered(button.contains(x, y));
+      // Emit the general mouse move event
+      GameEvents.emitInput(INPUT_EVENTS.MOUSE_MOVE, { x, y, originalEvent: e });
+      
+      // Update hover state for all buttons and emit events for changes
+      Object.entries(this.buttons).forEach(([key, button]) => {
+        const isHovering = button.contains(x, y);
+        
+        // Only emit events if the hover state changes
+        if (isHovering !== button.isHovered) {
+          button.setHovered(isHovering);
+          
+          // Emit button hover event
+          GameEvents.emitInput(INPUT_EVENTS.BUTTON_HOVER, {
+            buttonKey: key,
+            button: button,
+            isHovered: isHovering,
+            x, y,
+            originalEvent: e
+          });
+        }
       });
     }
     
@@ -155,17 +182,19 @@ export default class ButtonInputHandler {
       const { x, y } = this.getCanvasCoordinates(touch.clientX, touch.clientY);
       const target = this.findTargetButton(x, y);
       
+      // Emit the general touch start event
+      GameEvents.emitInput(INPUT_EVENTS.TOUCH_START, { x, y, originalEvent: e });
+      
       if (target) {
         target.button.setPressed(true);
         
-        // Execute button-specific press action
-        if (target.key === 'move') {
-          this.buttonSystem.triggerMove(true);
-        } else if (target.key === 'jump') {
-          this.buttonSystem.triggerJump();
-        } else if (target.key === 'attack') {
-          this.buttonSystem.triggerAttack();
-        }
+        // Emit button-specific press event
+        GameEvents.emitInput(INPUT_EVENTS.BUTTON_PRESS, {
+          buttonKey: target.key,
+          button: target.button,
+          x, y,
+          originalEvent: e
+        });
       }
     }
     
@@ -176,19 +205,21 @@ export default class ButtonInputHandler {
     handleTouchEnd(e) {
       e.preventDefault(); // Prevent scrolling/zooming
       
-      // For move button, we need to stop walking when released
-      if (this.buttons.move.isPressed) {
-        this.buttons.move.setPressed(false);
-        this.buttonSystem.triggerMove(false);
-      }
+      // Emit the general touch end event
+      GameEvents.emitInput(INPUT_EVENTS.TOUCH_END, { originalEvent: e });
       
-      // For other buttons, just update their visual state
-      if (this.buttons.jump.isPressed) {
-        this.buttons.jump.setPressed(false);
-      }
-      
-      if (this.buttons.attack.isPressed) {
-        this.buttons.attack.setPressed(false);
+      // Check all buttons that might be pressed
+      for (const [key, button] of Object.entries(this.buttons)) {
+        if (button.isPressed) {
+          button.setPressed(false);
+          
+          // Emit button-specific release event
+          GameEvents.emitInput(INPUT_EVENTS.BUTTON_RELEASE, {
+            buttonKey: key,
+            button: button,
+            originalEvent: e
+          });
+        }
       }
     }
     
@@ -197,15 +228,35 @@ export default class ButtonInputHandler {
      * @param {KeyboardEvent} e - Keyboard event
      */
     handleKeyDown(e) {
+      // Emit the general key down event
+      GameEvents.emitInput(INPUT_EVENTS.KEY_DOWN, { 
+        key: e.key, 
+        keyCode: e.keyCode, 
+        originalEvent: e 
+      });
+      
+      // Emit specific button presses based on keys
+      let buttonKey = null;
+      
       if (e.key === "ArrowRight") {
-        this.buttons.move.setPressed(true);
-        this.buttonSystem.triggerMove(true);
+        buttonKey = 'move';
       } else if (e.key === "ArrowUp" || e.key === " ") {
-        this.buttons.jump.setPressed(true);
-        this.buttonSystem.triggerJump();
+        buttonKey = 'jump';
       } else if (e.key === "z" || e.key === "Z") {
-        this.buttons.attack.setPressed(true);
-        this.buttonSystem.triggerAttack();
+        buttonKey = 'attack';
+      }
+      
+      if (buttonKey && this.buttons[buttonKey]) {
+        this.buttons[buttonKey].setPressed(true);
+        
+        // Emit button-specific press event
+        GameEvents.emitInput(INPUT_EVENTS.BUTTON_PRESS, {
+          buttonKey,
+          button: this.buttons[buttonKey],
+          isKeyboard: true,
+          key: e.key,
+          originalEvent: e
+        });
       }
     }
     
@@ -214,13 +265,35 @@ export default class ButtonInputHandler {
      * @param {KeyboardEvent} e - Keyboard event
      */
     handleKeyUp(e) {
+      // Emit the general key up event
+      GameEvents.emitInput(INPUT_EVENTS.KEY_UP, { 
+        key: e.key, 
+        keyCode: e.keyCode, 
+        originalEvent: e 
+      });
+      
+      // Emit specific button releases based on keys
+      let buttonKey = null;
+      
       if (e.key === "ArrowRight") {
-        this.buttons.move.setPressed(false);
-        this.buttonSystem.triggerMove(false);
+        buttonKey = 'move';
       } else if (e.key === "ArrowUp" || e.key === " ") {
-        this.buttons.jump.setPressed(false);
+        buttonKey = 'jump';
       } else if (e.key === "z" || e.key === "Z") {
-        this.buttons.attack.setPressed(false);
+        buttonKey = 'attack';
+      }
+      
+      if (buttonKey && this.buttons[buttonKey] && this.buttons[buttonKey].isPressed) {
+        this.buttons[buttonKey].setPressed(false);
+        
+        // Emit button-specific release event
+        GameEvents.emitInput(INPUT_EVENTS.BUTTON_RELEASE, {
+          buttonKey,
+          button: this.buttons[buttonKey],
+          isKeyboard: true,
+          key: e.key,
+          originalEvent: e
+        });
       }
     }
   }
