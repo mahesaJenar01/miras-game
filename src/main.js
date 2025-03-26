@@ -136,7 +136,7 @@ const main = () => {
   // Expose the game instance globally so that other scripts can access it
   window.game = game;
   
-  // Start the game
+  // Start the game.
   game.start();
 };
 
