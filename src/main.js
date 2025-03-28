@@ -6,7 +6,7 @@ import ButtonSystem from './controls/ButtonSystem.js';
 import { canvas, context, scene, stickfigure } from './utils/setup.js';
 import Attacker from './components/character/Attacker.js';
 import GameEvents from './events/GameEvents.js';
-import { GAME_EVENTS, CHARACTER_EVENTS, SCENE_EVENTS } from './events/EventTypes.js';
+import { GAME_EVENTS, CHARACTER_EVENTS } from './events/EventTypes.js';
 
 class Game {
   /**
@@ -20,7 +20,7 @@ class Game {
     this.canvas = canvas;
     this.components = components; // { scene, stickfigure }
     this.worldOffset = 0;
-    this.gameSpeed = 2;
+    this.gameSpeed = 3.5;
     this.isWalking = false;
     this.animationFrameId = null;
     

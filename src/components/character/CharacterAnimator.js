@@ -1,7 +1,7 @@
 /**
  * CharacterAnimator.js - Handles character animations separately from rendering
  * Manages animation state, timing, and calculations
- * Updated to use the event system
+ * Updated to support simultaneous animations for multiple actions
  */
 import GameEvents from '../../events/GameEvents.js';
 import { CHARACTER_EVENTS } from '../../events/EventTypes.js';
@@ -18,11 +18,14 @@ class CharacterAnimator {
     this.walkCycle = 0;
     this.walkSpeed = character.config.walkSpeed || 0.1;
     this.swingAmplitude = Math.PI / 6; // 30° swing amplitude
+    this.legSwing = 0;
+    this.armSwing = 0;
     
     // Jump animation properties
     this.jumpVelocity = 0;
     this.gravity = 0.4;
     this.initialY = character.y;
+    this.jumpBlendFactor = 0; // For blending jump with walk animations
     
     // Attack animation properties (for attacker)
     this.isAttacking = false;
@@ -73,14 +76,19 @@ class CharacterAnimator {
   
   /**
    * Update all animations for the character
+   * Now supports simultaneous walking and jumping
    */
   update() {
-    // Update walking animation
+    // Update walking animation if walking is active
     if (this.character.isWalking) {
       this.updateWalkAnimation();
+    } else {
+      // Gradually reduce swing when not walking
+      this.legSwing *= 0.8;
+      this.armSwing *= 0.8;
     }
     
-    // Update jump animation
+    // Update jump animation if jumping is active
     if (this.character.isJumping) {
       this.updateJumpAnimation();
     }
@@ -103,24 +111,14 @@ class CharacterAnimator {
   
   /**
    * Update the walking animation
+   * Now stores swing values for blending with jumping
    */
   updateWalkAnimation() {
     this.walkCycle += this.walkSpeed;
     
     // Calculate swing values for limbs
-    const legSwing = Math.sin(this.walkCycle) * this.swingAmplitude;
-    const armSwing = Math.sin(this.walkCycle) * (this.swingAmplitude * 2);
-    
-    // Set the swing values on the limbs
-    if (this.character.leftHand && this.character.rightHand) {
-      this.character.leftHand.swing = armSwing;
-      this.character.rightHand.swing = armSwing; // Opposite direction
-    }
-    
-    if (this.character.leftLeg && this.character.rightLeg) {
-      this.character.leftLeg.swing = legSwing;
-      this.character.rightLeg.swing = legSwing; // Opposite direction
-    }
+    this.legSwing = Math.sin(this.walkCycle) * this.swingAmplitude;
+    this.armSwing = Math.sin(this.walkCycle) * (this.swingAmplitude * 2);
     
     // Emit animation frame event
     GameEvents.emitCharacter(CHARACTER_EVENTS.ANIMATION_FRAME, {
@@ -132,6 +130,7 @@ class CharacterAnimator {
   
   /**
    * Update the jump animation
+   * Now preserves walking state and blends with walking animation
    */
   updateJumpAnimation() {
     const prevY = this.character.y;
@@ -140,12 +139,16 @@ class CharacterAnimator {
     this.character.y -= this.jumpVelocity;
     this.jumpVelocity -= this.gravity;
     
+    // Update jump blend factor based on jump height
+    this.jumpBlendFactor = Math.min(1, Math.abs(this.character.y - this.initialY) / 50);
+    
     // Check if character is at the peak of the jump
     if (this.jumpVelocity <= 0 && this.jumpVelocity + this.gravity > 0) {
       // Emit jump peak event
       GameEvents.emitCharacter(CHARACTER_EVENTS.JUMP_PEAK, {
         y: this.character.y,
-        characterType: this.characterType
+        characterType: this.characterType,
+        isWalking: this.character.isWalking
       });
     }
     
@@ -154,26 +157,34 @@ class CharacterAnimator {
       this.character.y = this.initialY;
       this.character.isJumping = false;
       this.jumpVelocity = 0;
+      this.jumpBlendFactor = 0;
       
       // Emit jump end event
       GameEvents.emitCharacter(CHARACTER_EVENTS.JUMP_END, {
-        characterType: this.characterType
+        characterType: this.characterType,
+        isWalking: this.character.isWalking
       });
     }
     
     // Emit position change event
     if (prevY !== this.character.y) {
+      // Determine combined state
+      const state = this.character.isWalking ? 'walking_jumping' : 'jumping';
+      
       GameEvents.emitCharacter(CHARACTER_EVENTS.POSITION_CHANGE, {
         character: this.characterType,
         x: this.character.x,
         y: this.character.y,
-        state: this.character.isJumping ? 'jumping' : 'standing'
+        state: state,
+        isWalking: this.character.isWalking,
+        isJumping: true
       });
     }
   }
   
   /**
    * Start a jump if not already jumping
+   * Maintains walking state if active
    */
   startJump() {
     if (!this.character.isJumping) {
@@ -181,13 +192,53 @@ class CharacterAnimator {
       this.jumpVelocity = 10; // Initial upward velocity
       this.initialY = this.character.y;
       
+      // Determine combined state
+      const state = this.character.isWalking ? 'walking_jumping' : 'jumping';
+      
       // Emit jump start event
       GameEvents.emitCharacter(CHARACTER_EVENTS.JUMP_START, {
         characterType: this.characterType,
         x: this.character.x,
-        y: this.character.y
+        y: this.character.y,
+        state: state,
+        isWalking: this.character.isWalking
       });
     }
+  }
+  
+  /**
+   * Get the current leg swing value, blended with jump state if needed
+   * @returns {number} Current leg swing value
+   */
+  getLegSwing() {
+    // Apply jump influence to leg animation when jumping
+    if (this.character.isJumping) {
+      // Reduce leg swing during jump height based on jump blend factor
+      return this.legSwing * (1 - this.jumpBlendFactor * 0.5);
+    }
+    return this.legSwing;
+  }
+  
+  /**
+   * Get the current arm swing value, blended with jump state if needed
+   * @returns {number} Current arm swing value
+   */
+  getArmSwing() {
+    // Apply jump influence to arm animation when jumping
+    if (this.character.isJumping) {
+      // Reduce arm swing during jump height
+      return this.armSwing * (1 - this.jumpBlendFactor * 0.3);
+    }
+    return this.armSwing;
+  }
+  
+  /**
+   * Check if limb animation is needed even when not walking
+   * @returns {boolean} Whether limb animation is needed
+   */
+  needsLimbAnimation() {
+    // Animations are needed if jumping or attacking
+    return this.character.isJumping || this.isAttacking;
   }
   
   /**
@@ -272,14 +323,24 @@ class CharacterAnimator {
   
   /**
    * Reset the animator state (for restarting animations)
+   * Preserves independent animation states
    */
   reset() {
     this.walkCycle = 0;
-    this.jumpVelocity = 0;
+    this.legSwing = 0;
+    this.armSwing = 0;
     
     const wasAttacking = this.isAttacking;
     this.isAttacking = false;
     this.attackFrame = 0;
+    
+    // Only reset jump if actually jumping
+    if (this.character.isJumping) {
+      this.jumpVelocity = 0;
+      this.character.isJumping = false;
+      this.character.y = this.initialY;
+      this.jumpBlendFactor = 0;
+    }
     
     // Emit events if state changed
     if (wasAttacking) {

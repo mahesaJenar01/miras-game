@@ -9,6 +9,7 @@ import { INPUT_EVENTS, CHARACTER_EVENTS, UI_EVENTS } from '../events/EventTypes.
 /**
  * ButtonSystem - Central coordinator for all button-related functionality
  * Manages button creation, positioning, and actions using the event system
+ * Updated to support simultaneous button actions
  */
 export default class ButtonSystem {
   /**
@@ -24,6 +25,9 @@ export default class ButtonSystem {
     
     // Create button instances (without positions initially)
     this.buttons = this.createButtons();
+    
+    // Track button active states
+    this.activeButtons = new Set();
     
     // Initialize the renderer
     this.renderer = new ButtonRenderer(context, this.buttons);
@@ -46,6 +50,9 @@ export default class ButtonSystem {
     GameEvents.on(INPUT_EVENTS.BUTTON_PRESS, (data) => {
       const { buttonKey } = data;
       
+      // Add button to active set
+      this.activeButtons.add(buttonKey);
+      
       // Trigger the appropriate action based on the button
       if (buttonKey === 'move') {
         this.handleMoveButtonPress();
@@ -59,6 +66,9 @@ export default class ButtonSystem {
     // Listen for button release events
     GameEvents.on(INPUT_EVENTS.BUTTON_RELEASE, (data) => {
       const { buttonKey } = data;
+      
+      // Remove button from active set
+      this.activeButtons.delete(buttonKey);
       
       // Handle button release actions
       if (buttonKey === 'move') {
@@ -90,39 +100,45 @@ export default class ButtonSystem {
   }
   
   /**
-   * Handle move button press
+   * Handle move button press - now preserves other active states
    */
   handleMoveButtonPress() {
     // Emit character movement start event
     GameEvents.emitCharacter(CHARACTER_EVENTS.MOVE_START, {
-      direction: 'right' // Since this game only moves right
+      direction: 'right', // Since this game only moves right
+      activeButtons: Array.from(this.activeButtons)
     });
   }
   
   /**
-   * Handle move button release
+   * Handle move button release - now preserves other active states
    */
   handleMoveButtonRelease() {
     // Emit character movement stop event
     GameEvents.emitCharacter(CHARACTER_EVENTS.MOVE_STOP, {
-      direction: 'right' // Since this game only moves right
+      direction: 'right', // Since this game only moves right
+      activeButtons: Array.from(this.activeButtons)
     });
   }
   
   /**
-   * Handle jump button press
+   * Handle jump button press - now works alongside other actions
    */
   handleJumpButtonPress() {
     // Emit character jump start event
-    GameEvents.emitCharacter(CHARACTER_EVENTS.JUMP_START, {});
+    GameEvents.emitCharacter(CHARACTER_EVENTS.JUMP_START, {
+      activeButtons: Array.from(this.activeButtons)
+    });
   }
   
   /**
-   * Handle attack button press
+   * Handle attack button press - now works alongside other actions
    */
   handleAttackButtonPress() {
     // Emit character attack start event
-    GameEvents.emitCharacter(CHARACTER_EVENTS.ATTACK_START, {});
+    GameEvents.emitCharacter(CHARACTER_EVENTS.ATTACK_START, {
+      activeButtons: Array.from(this.activeButtons)
+    });
   }
   
   /**
@@ -229,36 +245,71 @@ export default class ButtonSystem {
   }
   
   /**
-   * Trigger the move action (will be deprecated in favor of events)
+   * Check if a specific button is currently active
+   * @param {string} buttonKey - The button key to check
+   * @returns {boolean} True if the button is active
+   */
+  isButtonActive(buttonKey) {
+    return this.activeButtons.has(buttonKey);
+  }
+  
+  /**
+   * Get all currently active buttons
+   * @returns {Array} Array of active button keys
+   */
+  getActiveButtons() {
+    return Array.from(this.activeButtons);
+  }
+  
+  /**
+   * Legacy method to trigger move (now uses the event system)
    * @param {boolean} isActive - Whether movement should be active
    */
   triggerMove(isActive) {
     // For backward compatibility - emit events instead of direct calls
     if (isActive) {
+      // Add to active buttons if not already there
+      this.activeButtons.add('move');
+      
       GameEvents.emitCharacter(CHARACTER_EVENTS.MOVE_START, {
-        direction: 'right'
+        direction: 'right',
+        activeButtons: Array.from(this.activeButtons)
       });
     } else {
+      // Remove from active buttons
+      this.activeButtons.delete('move');
+      
       GameEvents.emitCharacter(CHARACTER_EVENTS.MOVE_STOP, {
-        direction: 'right'
+        direction: 'right',
+        activeButtons: Array.from(this.activeButtons)
       });
     }
   }
   
   /**
-   * Trigger the jump action (will be deprecated in favor of events)
+   * Legacy method to trigger jump (now uses the event system)
    */
   triggerJump() {
+    // Add to active buttons (will be released automatically after jump ends)
+    this.activeButtons.add('jump');
+    
     // For backward compatibility - emit an event instead of direct call
-    GameEvents.emitCharacter(CHARACTER_EVENTS.JUMP_START, {});
+    GameEvents.emitCharacter(CHARACTER_EVENTS.JUMP_START, {
+      activeButtons: Array.from(this.activeButtons)
+    });
   }
   
   /**
-   * Trigger the attack action (will be deprecated in favor of events)
+   * Legacy method to trigger attack (now uses the event system)
    */
   triggerAttack() {
+    // Add to active buttons (will be released automatically after attack ends)
+    this.activeButtons.add('attack');
+    
     // For backward compatibility - emit an event instead of direct call
-    GameEvents.emitCharacter(CHARACTER_EVENTS.ATTACK_START, {});
+    GameEvents.emitCharacter(CHARACTER_EVENTS.ATTACK_START, {
+      activeButtons: Array.from(this.activeButtons)
+    });
   }
   
   /**

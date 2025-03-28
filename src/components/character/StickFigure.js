@@ -1,7 +1,7 @@
 /**
  * StickFigure.js - Implementation of the main feminine character
  * Extends the base Character class with specific configurations
- * Updated to use the event system
+ * Updated to use the event system and support simultaneous actions
  */
 import Character from './base/Character.js';
 import CharacterAnimator from './CharacterAnimator.js';
@@ -52,18 +52,44 @@ class StickFigure extends Character {
    * Register event listeners for character behavior
    */
   registerEventListeners() {
-    // Listen for move events
+    // Listen for move events - now preserves other states
     GameEvents.on(CHARACTER_EVENTS.MOVE_START, (data) => {
       this.isWalking = true;
+      
+      // Emit combined state event if also jumping
+      if (this.isJumping) {
+        GameEvents.emitCharacter(CHARACTER_EVENTS.POSITION_CHANGE, {
+          character: 'stickfigure',
+          x: this.x,
+          y: this.y,
+          state: 'walking_jumping',
+          isWalking: true,
+          isJumping: true
+        });
+      }
     });
     
     GameEvents.on(CHARACTER_EVENTS.MOVE_STOP, (data) => {
       this.isWalking = false;
+      
+      // Emit state update when walking stops but jumping continues
+      if (this.isJumping) {
+        GameEvents.emitCharacter(CHARACTER_EVENTS.POSITION_CHANGE, {
+          character: 'stickfigure',
+          x: this.x,
+          y: this.y,
+          state: 'jumping',
+          isWalking: false,
+          isJumping: true
+        });
+      }
     });
     
-    // Listen for jump events
+    // Listen for jump events - now preserves walking state
     GameEvents.on(CHARACTER_EVENTS.JUMP_START, (data) => {
       this.startJump();
+      
+      // State change events are emitted in startJump() method
     });
     
     // Listen for game resize events
@@ -106,11 +132,23 @@ class StickFigure extends Character {
     
     // Emit position change event if position changed
     if (prevX !== this.x || prevY !== this.y) {
+      // Determine combined state for event
+      let state = 'standing';
+      if (this.isWalking && this.isJumping) {
+        state = 'walking_jumping';
+      } else if (this.isWalking) {
+        state = 'walking';
+      } else if (this.isJumping) {
+        state = 'jumping';
+      }
+      
       GameEvents.emitCharacter(CHARACTER_EVENTS.POSITION_CHANGE, {
         character: 'stickfigure',
         x: this.x,
         y: this.y,
-        state: this.isJumping ? 'jumping' : (this.isWalking ? 'walking' : 'standing')
+        state: state,
+        isWalking: this.isWalking,
+        isJumping: this.isJumping
       });
     }
   }
@@ -128,12 +166,16 @@ class StickFigure extends Character {
     // Draw body
     this.body.draw();
     
-    // Draw limbs with animation if walking
-    if (this.isWalking) {
-      this.leftHand.drawAnimated(this.leftHand.swing || 0);
-      this.rightHand.drawAnimated(this.rightHand.swing || 0);
-      this.leftLeg.drawAnimated(this.leftLeg.swing || 0);
-      this.rightLeg.drawAnimated(this.rightLeg.swing || 0);
+    // Draw limbs with animation
+    // Now uses combined state information from animator
+    const legSwing = this.animator.getLegSwing();
+    const armSwing = this.animator.getArmSwing();
+    
+    if (this.isWalking || this.animator.needsLimbAnimation()) {
+      this.leftHand.drawAnimated(armSwing);
+      this.rightHand.drawAnimated(armSwing);
+      this.leftLeg.drawAnimated(legSwing);
+      this.rightLeg.drawAnimated(legSwing);
     } else {
       this.leftHand.draw();
       this.rightHand.draw();
@@ -150,23 +192,30 @@ class StickFigure extends Character {
   }
   
   /**
-   * Start a jump using the animator
+   * Start a jump using the animator - now preserves walking state
    */
   startJump() {
     if (!this.isJumping) {
+      this.isJumping = true;
       this.animator.startJump();
+      
+      // Determine combined state for event
+      const state = this.isWalking ? 'walking_jumping' : 'jumping';
       
       // Emit jump start event
       GameEvents.emitCharacter(CHARACTER_EVENTS.JUMP_START, {
         character: 'stickfigure',
         x: this.x,
-        y: this.y
+        y: this.y,
+        state: state,
+        isWalking: this.isWalking,
+        isJumping: true
       });
     }
   }
   
   /**
-   * Update jump animation using the animator
+   * Update jump animation using the animator - maintains walking if active
    */
   updateJump() {
     if (this.isJumping) {
@@ -177,11 +226,16 @@ class StickFigure extends Character {
       
       // Emit position change event if position changed
       if (prevY !== this.y) {
+        // Determine combined state for event
+        const state = this.isWalking ? 'walking_jumping' : 'jumping';
+        
         GameEvents.emitCharacter(CHARACTER_EVENTS.POSITION_CHANGE, {
           character: 'stickfigure',
           x: this.x,
           y: this.y,
-          state: 'jumping'
+          state: state,
+          isWalking: this.isWalking,
+          isJumping: true
         });
       }
     }
