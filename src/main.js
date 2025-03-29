@@ -1,12 +1,14 @@
 /**
  * main.js - Main game entry point
- * Updated to use the event communication system
+ * Updated to include collectible system
  */
 import ButtonSystem from './controls/ButtonSystem.js';
 import { canvas, context, scene, stickfigure } from './utils/setup.js';
 import Attacker from './components/character/Attacker.js';
 import GameEvents from './events/GameEvents.js';
-import { GAME_EVENTS, CHARACTER_EVENTS } from './events/EventTypes.js';
+import { GAME_EVENTS, CHARACTER_EVENTS, COLLECTIBLE_EVENTS } from './events/EventTypes.js';
+import CollectibleManager from './components/collectibles/CollectibleManager.js';
+import CollectibleCounter from './components/ui/CollectibleCounter.js';
 
 class Game {
   /**
@@ -29,6 +31,20 @@ class Game {
     
     // Create the button system
     this.buttonSystem = new ButtonSystem(this, canvas, context);
+    
+    // Initialize collectible system
+    this.collectibleManager = new CollectibleManager(
+      context, 
+      components.scene.ground,
+      this.worldOffset
+    );
+    
+    // Initialize collectible counter UI
+    this.collectibleCounter = new CollectibleCounter(
+      context, 
+      10, 10, // Position at top-left with some padding
+      this.collectibleManager
+    );
     
     // Register event listeners
     this.registerEventListeners();
@@ -60,6 +76,11 @@ class Game {
       if (data.worldOffset !== undefined) {
         this.worldOffset = data.worldOffset;
       }
+    });
+    
+    // Listen for collectible events
+    GameEvents.on(COLLECTIBLE_EVENTS.COLLECTIBLE_COLLECTED, (data) => {
+      // Play collection sound or other effects if needed
     });
   }
   
@@ -121,7 +142,7 @@ class Game {
         panel.style.top = `${canvasRect.top + 10}px`;
         panel.style.right = `${window.innerWidth - canvasRect.right + 10}px`;
       }
-    };
+    };  
     
     // Update position when window is resized
     window.addEventListener('resize', this._updateDebugPanelPosition);
@@ -131,7 +152,7 @@ class Game {
     
     // Update the debug panel content and position periodically
     setInterval(() => {
-      if (document.getElementById('debug-panel')) {
+      if (document.getElementById('debug-panel')) {  
         // Get the last few events from history
         const history = GameEvents.getHistory().slice(-5);
         
@@ -143,7 +164,7 @@ class Game {
           }).reverse().join('<br>');
         
         // Also update position in case canvas has moved
-        updateDebugPanelPosition();
+        this._updateDebugPanelPosition();
       }
     }, 500);
   }
@@ -161,6 +182,10 @@ class Game {
     // Update and draw the scene with current world offset
     scene.update(this.worldOffset);
     scene.draw(this.worldOffset);
+
+    // Update and draw collectibles
+    this.collectibleManager.update(this.worldOffset, stickfigure);
+    this.collectibleManager.draw(this.worldOffset);    
 
     // Update stickfigure
     if (stickfigure.update) {
@@ -197,6 +222,9 @@ class Game {
 
     // Draw buttons using the button system
     this.buttonSystem.draw();
+    
+    // Draw collectible counter (on top of everything)
+    this.collectibleCounter.draw();
   }
 
   /**
@@ -253,6 +281,13 @@ class Game {
     
     // Recreate the attacker when restarting to ensure it uses the updated stickfigure
     this.attacker = new Attacker(this.context, this.components.stickfigure);
+    
+    // Reinitialize collectible manager with updated components
+    this.collectibleManager = new CollectibleManager(
+      this.context, 
+      this.components.scene.ground,
+      this.worldOffset
+    );
     
     // Update button positions
     this.buttonSystem.updateButtonPositions();

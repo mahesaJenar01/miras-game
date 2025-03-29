@@ -1,7 +1,6 @@
 /**
  * Scene.js - Main container for all scene elements
- * Encapsulates sky, sun, clouds, ground and their interactions
- * Updated to use the event system
+ * Updated to support collectible items
  */
 import SceneManager from './SceneManager.js';
 import Sky from './components/Sky.js';
@@ -9,7 +8,7 @@ import Sun from './components/Sun.js';
 import Cloud from './components/Cloud.js';
 import Ground from './components/Ground.js';
 import GameEvents from '../events/GameEvents.js';
-import { SCENE_EVENTS, GAME_EVENTS } from '../events/EventTypes.js';
+import { SCENE_EVENTS, GAME_EVENTS, COLLECTIBLE_EVENTS } from '../events/EventTypes.js';
 
 class Scene {
   /**
@@ -55,6 +54,15 @@ class Scene {
       const { effect, options } = data;
       if (effect && this.manager) {
         this.manager.applyEffect(effect, options);
+      }
+    });
+    
+    // Listen for collectible generation requests
+    GameEvents.on(COLLECTIBLE_EVENTS.COLLECTIBLE_GENERATED, (data) => {
+      // Handle any scene effects that might be triggered when collectibles are generated
+      // For example, we could add subtle visual effects near collectible spawn points
+      if (data.worldOffset && this.manager) {
+        // We could potentially add special effects at the collectible spawn points
       }
     });
   }
@@ -177,6 +185,39 @@ class Scene {
       clouds: this.clouds,
       ground: this.ground
     };
+  }
+  
+  /**
+   * Get the ground Y position to place collectibles correctly
+   * @returns {number} The Y position of the ground top
+   */
+  getGroundTopPosition() {
+    if (this.ground) {
+      return this.ground.y;
+    }
+    return this.canvas.height * 0.8; // Default if ground not available
+  }
+
+  /**
+   * Get the ground height for positioning calculations
+   * @returns {number} The height of the ground
+   */
+  getGroundHeight() {
+    if (this.ground) {
+      return this.ground.height;
+    }
+    return this.canvas.height * 0.2; // Default if ground not available
+  }
+
+  /**
+   * Get grass height (needed to position collectibles above grass level)
+   * @returns {number} The height of the grass portion of the ground
+   */
+  getGrassHeight() {
+    if (this.ground) {
+      return this.ground.grassHeight;
+    }
+    return this.canvas.height * 0.06; // Default if ground not available
   }
   
   /**
