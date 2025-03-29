@@ -87,13 +87,18 @@ class Game {
   
   /**
    * Add debug UI elements to the page
+   * Positioned at the upper right corner of the canvas
    */
   addDebugUI() {
     // Create a simple debug panel
     const debugPanel = document.createElement('div');
+    
+    // Position the panel exactly at the upper right of the canvas
+    const canvasRect = this.canvas.getBoundingClientRect();
+    
     debugPanel.style.position = 'fixed';
-    debugPanel.style.bottom = '10px';
-    debugPanel.style.right = '10px';
+    debugPanel.style.top = `${canvasRect.top + 10}px`;  // 10px from the top of canvas
+    debugPanel.style.right = `${window.innerWidth - canvasRect.right + 10}px`;  // 10px from the right of canvas
     debugPanel.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
     debugPanel.style.color = 'white';
     debugPanel.style.padding = '10px';
@@ -107,7 +112,24 @@ class Game {
     
     document.body.appendChild(debugPanel);
     
-    // Update the debug panel periodically
+    // Function to update debug panel position
+    // Store reference to the function for cleanup
+    this._updateDebugPanelPosition = () => {
+      const panel = document.getElementById('debug-panel');
+      if (panel) {
+        const canvasRect = this.canvas.getBoundingClientRect();
+        panel.style.top = `${canvasRect.top + 10}px`;
+        panel.style.right = `${window.innerWidth - canvasRect.right + 10}px`;
+      }
+    };
+    
+    // Update position when window is resized
+    window.addEventListener('resize', this._updateDebugPanelPosition);
+    
+    // Listen for game resize events to update position
+    GameEvents.on(GAME_EVENTS.RESIZE, this._updateDebugPanelPosition);
+    
+    // Update the debug panel content and position periodically
     setInterval(() => {
       if (document.getElementById('debug-panel')) {
         // Get the last few events from history
@@ -119,6 +141,9 @@ class Game {
             const time = new Date(event.timestamp).toISOString().substr(11, 8);
             return `${time} - ${event.type}`;
           }).reverse().join('<br>');
+        
+        // Also update position in case canvas has moved
+        updateDebugPanelPosition();
       }
     }, 500);
   }
@@ -265,6 +290,11 @@ class Game {
     // Clean up debug UI if it exists
     const debugPanel = document.getElementById('debug-panel');
     if (debugPanel) {
+      // Remove the resize event listener if we have a reference to it
+      if (this._updateDebugPanelPosition) {
+        window.removeEventListener('resize', this._updateDebugPanelPosition);
+        GameEvents.off(GAME_EVENTS.RESIZE, this._updateDebugPanelPosition);
+      }
       debugPanel.remove();
     }
   }

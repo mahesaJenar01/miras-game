@@ -353,14 +353,14 @@ export default class ButtonInputHandler {
         originalEvent: e 
       });
       
-      // Map keys to buttons
+      // Map keys to buttons - Updated mapping
       let buttonKey = null;
       
-      if (e.key === "ArrowRight") {
+      if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") {
         buttonKey = 'move';
-      } else if (e.key === "ArrowUp" || e.key === " ") {
+      } else if (e.key === "ArrowUp" || e.key === " " || e.key === "w" || e.key === "W") {
         buttonKey = 'jump';
-      } else if (e.key === "z" || e.key === "Z") {
+      } else if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") {
         buttonKey = 'attack';
       }
       
@@ -394,14 +394,14 @@ export default class ButtonInputHandler {
         originalEvent: e 
       });
       
-      // Map keys to buttons
+      // Map keys to buttons - Updated mapping
       let buttonKey = null;
       
-      if (e.key === "ArrowRight") {
+      if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") {
         buttonKey = 'move';
-      } else if (e.key === "ArrowUp" || e.key === " ") {
+      } else if (e.key === "ArrowUp" || e.key === " " || e.key === "w" || e.key === "W") {
         buttonKey = 'jump';
-      } else if (e.key === "z" || e.key === "Z") {
+      } else if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") {
         buttonKey = 'attack';
       }
       
@@ -411,9 +411,9 @@ export default class ButtonInputHandler {
         
         // Define groups of keys that map to the same button
         const buttonKeyMappings = {
-          'move': ['ArrowRight'],
-          'jump': ['ArrowUp', ' '],
-          'attack': ['z', 'Z']
+          'move': ['ArrowRight', 'd', 'D'],
+          'jump': ['ArrowUp', ' ', 'w', 'W'],
+          'attack': ['ArrowDown', 's', 'S']
         };
         
         // If there's another key pressed that maps to this button, keep it pressed
