@@ -1,12 +1,14 @@
 /**
  * main.js - Main game entry point
- * Updated to use the event communication system
+ * Updated to use the event communication system and include collectibles
  */
 import ButtonSystem from './controls/ButtonSystem.js';
 import { canvas, context, scene, stickfigure } from './utils/setup.js';
 import Attacker from './components/character/Attacker.js';
 import GameEvents from './events/GameEvents.js';
 import { GAME_EVENTS, CHARACTER_EVENTS } from './events/EventTypes.js';
+import CollectibleManager from './components/collectibles/CollectibleManager.js';
+import CollectibleDisplay from './components/collectibles/CollectibleDisplay.js';
 
 class Game {
   /**
@@ -29,6 +31,12 @@ class Game {
     
     // Create the button system
     this.buttonSystem = new ButtonSystem(this, canvas, context);
+    
+    // Create the collectible manager
+    this.collectibleManager = new CollectibleManager(context, canvas);
+    
+    // Create the collectible display
+    this.collectibleDisplay = new CollectibleDisplay(context, canvas);
     
     // Register event listeners
     this.registerEventListeners();
@@ -143,7 +151,7 @@ class Game {
           }).reverse().join('<br>');
         
         // Also update position in case canvas has moved
-        updateDebugPanelPosition();
+        this._updateDebugPanelPosition();
       }
     }, 500);
   }
@@ -180,6 +188,12 @@ class Game {
       this.attacker.update();
       this.attacker.draw();
     }
+    
+    // Update and draw collectibles
+    if (this.collectibleManager) {
+      this.collectibleManager.update();
+      this.collectibleManager.draw(this.worldOffset);
+    }
 
     // Update world offset if the stickfigure is walking
     if (this.isWalking) {
@@ -197,6 +211,12 @@ class Game {
 
     // Draw buttons using the button system
     this.buttonSystem.draw();
+    
+    // Update and draw collectible display (score UI)
+    if (this.collectibleDisplay) {
+      this.collectibleDisplay.update();
+      this.collectibleDisplay.draw();
+    }
   }
 
   /**

@@ -148,6 +148,18 @@ class GameEventEmitter extends EventEmitter {
   }
   
   /**
+   * Emit a collectible event
+   * @param {string} eventType - The collectible event type from COLLECTIBLE_EVENTS
+   * @param {any} data - Optional data to pass to listeners
+   */
+  emitCollectible(eventType, data) {
+    if (!Object.values(this.types.COLLECTIBLE_EVENTS).includes(eventType)) {
+      console.warn(`[GameEvents] '${eventType}' is not a registered collectible event type`);
+    }
+    return this.emit(eventType, data);
+  }
+  
+  /**
    * Subscribe to multiple events with a single listener
    * @param {string[]} eventTypes - Array of event types to listen for
    * @param {Function} listener - The callback function to execute
