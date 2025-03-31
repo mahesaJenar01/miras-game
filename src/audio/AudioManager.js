@@ -1,6 +1,7 @@
 /**
  * AudioManager.js - Simple audio system for game sound effects
  * Handles loading and playing sounds for various game events
+ * Updated to support tulip collectible sounds
  */
 import GameEvents from '../events/GameEvents.js';
 import { AUDIO_EVENTS, COLLECTIBLE_EVENTS } from '../events/EventTypes.js';
@@ -25,9 +26,9 @@ class AudioManager {
    */
   initAudio() {
     // Create audio elements for different sound types
-    this.createAudio('coin', 'coin.mp3');
-    this.createAudio('star', 'star.mp3');
-    this.createAudio('gem', 'gem.mp3');
+    this.createAudio('redtulip', 'redtulip.mp3');
+    this.createAudio('pinktulip', 'pinktulip.mp3');
+    this.createAudio('goldentulip', 'goldentulip.mp3');
     this.createAudio('jump', 'jump.mp3');
     this.createAudio('attack', 'attack.mp3');
   }
@@ -72,15 +73,15 @@ class AudioManager {
   
   /**
    * Play a sound when collecting an item
-   * @param {string} type - Type of collectible ('coin', 'star', 'gem')
+   * @param {string} type - Type of collectible ('redtulip', 'pinktulip', 'goldentulip')
    */
   playCollectSound(type) {
     // Choose the appropriate sound based on collectible type
     let soundId = type;
     
-    // Default to coin sound if type not found
+    // Default to redtulip sound if type not found
     if (!this.sounds.has(soundId)) {
-      soundId = 'coin';
+      soundId = 'redtulip';
     }
     
     // Play the sound

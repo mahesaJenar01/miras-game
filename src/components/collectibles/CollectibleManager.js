@@ -1,6 +1,7 @@
 /**
  * CollectibleManager.js - Manages all collectible items in the game
  * Handles spawning, updating, collision detection, and collection
+ * Updated to use tulip flowers instead of coins/stars/gems
  */
 import Collectible from './Collectible.js';
 import GameEvents from '../../events/GameEvents.js';
@@ -18,14 +19,14 @@ class CollectibleManager {
     this.collectibles = [];
     this.collected = 0;
     this.typeDistribution = {
-      coin: 0.7,  // 70% chance of spawning a coin
-      star: 0.2,  // 20% chance of spawning a star
-      gem: 0.1    // 10% chance of spawning a gem
+      redtulip: 0.7,  // 70% chance of spawning a red tulip (common)
+      pinktulip: 0.2,  // 20% chance of spawning a pink tulip (uncommon)
+      goldentulip: 0.1    // 10% chance of spawning a golden tulip (rare)
     };
     this.valueMap = {
-      coin: 1,
-      star: 5,
-      gem: 10
+      redtulip: 1,   // Red tulip is worth 1 point
+      pinktulip: 5,  // Pink tulip is worth 5 points
+      goldentulip: 10  // Golden tulip is worth 10 points
     };
     this.spawnTimer = 0;
     this.spawnInterval = 120; // frames between spawns (about 2 seconds at 60fps)
@@ -118,7 +119,7 @@ class CollectibleManager {
     
     // Determine collectible type based on distribution
     const typeRoll = Math.random();
-    let type = 'coin';
+    let type = 'redtulip';
     let cumulativeProbability = 0;
     
     for (const [itemType, probability] of Object.entries(this.typeDistribution)) {
@@ -131,8 +132,8 @@ class CollectibleManager {
     
     // Determine size based on type
     let size = 15; // Default size
-    if (type === 'star') size = 18;
-    else if (type === 'gem') size = 20;
+    if (type === 'pinktulip') size = 18;
+    else if (type === 'goldentulip') size = 20;
     
     // Create and add the collectible
     const collectible = new Collectible(

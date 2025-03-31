@@ -1,6 +1,7 @@
 /**
  * CollectibleDisplay.js - Displays the collected items count
  * Creates and updates a UI element for showing the current score
+ * Updated to display in the top-left with tulip icon
  */
 import GameEvents from '../../events/GameEvents.js';
 import { COLLECTIBLE_EVENTS, GAME_EVENTS } from '../../events/EventTypes.js';
@@ -21,11 +22,12 @@ class CollectibleDisplay {
     this.cornerRadius = 10;
     this.backgroundColor = 'rgba(0, 0, 0, 0.5)';
     this.textColor = '#FFFFFF';
-    this.coinColor = '#FFD700';
-    this.coinSize = 15;
+    this.tulipColor = '#FF5555'; // Red tulip color
+    this.stemColor = '#4CAF50'; // Green stem
+    this.tulipSize = 15;
     
-    // Position in the top-right corner
-    this.x = canvas.width - this.displayWidth - this.padding;
+    // Position in the top-left corner
+    this.x = this.padding;
     this.y = this.padding;
     
     // Animation properties
@@ -81,8 +83,8 @@ class CollectibleDisplay {
    * @param {number} canvasWidth - New canvas width
    */
   handleResize(canvasWidth) {
-    // Update position to stay in top-right corner
-    this.x = canvasWidth - this.displayWidth - this.padding;
+    // Update position to stay in top-left corner
+    this.x = this.padding;
   }
   
   /**
@@ -143,28 +145,12 @@ class CollectibleDisplay {
     context.fillStyle = this.backgroundColor;
     context.fill();
     
-    // Draw coin icon
-    const coinX = x + this.coinSize;
-    const coinY = y + displayHeight / 2;
+    // Draw tulip icon
+    const tulipX = x + this.tulipSize;
+    const tulipY = y + displayHeight / 2;
     
-    // Draw coin
-    context.beginPath();
-    context.arc(coinX, coinY, this.coinSize, 0, Math.PI * 2);
-    context.fillStyle = this.coinColor;
-    context.fill();
-    context.lineWidth = 2;
-    context.strokeStyle = '#B8860B'; // Dark goldenrod
-    context.stroke();
-    context.closePath();
-    
-    // Draw dollar sign
-    context.beginPath();
-    context.font = `bold ${this.coinSize}px Arial`;
-    context.textAlign = 'center';
-    context.textBaseline = 'middle';
-    context.fillStyle = '#B8860B';
-    context.fillText('$', coinX, coinY);
-    context.closePath();
+    // Draw the tulip
+    this.drawTulipIcon(tulipX, tulipY, this.tulipSize);
     
     // Draw count text
     context.font = 'bold 18px Arial';
@@ -172,10 +158,51 @@ class CollectibleDisplay {
     context.textAlign = 'left';
     context.textBaseline = 'middle';
     const countText = `× ${this.count}`;
-    context.fillText(countText, x + this.coinSize * 2 + 5, y + displayHeight / 2);
+    context.fillText(countText, x + this.tulipSize * 2 + 5, y + displayHeight / 2);
     
     // Restore context state
     context.restore();
+  }
+  
+  /**
+   * Draw a simplified tulip icon
+   * @param {number} x - Center X position
+   * @param {number} y - Center Y position
+   * @param {number} size - Icon size
+   */
+  drawTulipIcon(x, y, size) {
+    const context = this.context;
+    
+    // Draw stem
+    context.beginPath();
+    context.moveTo(x, y + size * 0.2);
+    context.lineTo(x, y + size * 0.7);
+    context.strokeStyle = this.stemColor;
+    context.lineWidth = size * 0.15;
+    context.stroke();
+    context.closePath();
+    
+    // Draw tulip flower (simplified for icon)
+    context.beginPath();
+    context.moveTo(x, y);
+    
+    // Left petal curve
+    context.bezierCurveTo(
+      x - size * 0.6, y - size * 0.3, 
+      x - size * 0.6, y - size * 0.7, 
+      x, y - size * 0.4
+    );
+    
+    // Right petal curve
+    context.bezierCurveTo(
+      x + size * 0.6, y - size * 0.7, 
+      x + size * 0.6, y - size * 0.3, 
+      x, y
+    );
+    
+    context.fillStyle = this.tulipColor;
+    context.fill();
+    context.closePath();
   }
 }
 
