@@ -9,6 +9,7 @@ import GameEvents from './events/GameEvents.js';
 import { GAME_EVENTS, CHARACTER_EVENTS } from './events/EventTypes.js';
 import CollectibleManager from './components/collectibles/CollectibleManager.js';
 import CollectibleDisplay from './components/collectibles/CollectibleDisplay.js';
+import ShopManager from './components/shop/ShopManager.js';
 
 class Game {
   /**
@@ -37,6 +38,9 @@ class Game {
     
     // Create the collectible display
     this.collectibleDisplay = new CollectibleDisplay(context, canvas);
+    
+    // Create the shop manager
+    this.shopManager = new ShopManager(context, canvas);
     
     // Register event listeners
     this.registerEventListeners();
@@ -217,6 +221,12 @@ class Game {
       this.collectibleDisplay.update();
       this.collectibleDisplay.draw();
     }
+    
+    // Update and draw shop manager
+    if (this.shopManager) {
+      this.shopManager.update();
+      this.shopManager.draw();
+    }
   }
 
   /**
@@ -305,6 +315,11 @@ class Game {
     
     if (this.attacker) {
       this.attacker.cleanup();
+    }
+    
+    // Clean up shop manager
+    if (this.shopManager) {
+      this.shopManager.cleanup();
     }
     
     // Clean up debug UI if it exists

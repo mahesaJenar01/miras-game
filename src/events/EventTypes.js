@@ -130,3 +130,13 @@ export const COLLECTIBLE_EVENTS = {
   // Audio cues for collection
   COLLECT_SOUND: 'collectible:collect_sound'
 };
+
+/**
+ * Shop-related events
+ */
+export const SHOP_EVENTS = {
+  OPEN: 'shop:open',
+  CLOSE: 'shop:close',
+  CARD_SELECT: 'shop:card_select',
+  CARD_REVEAL: 'shop:card_reveal'
+};

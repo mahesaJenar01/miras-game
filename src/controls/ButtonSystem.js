@@ -3,6 +3,7 @@ import ButtonInputHandler from './ButtonInputHandler.js';
 import MoveButton from './buttons/MoveButton.js';
 import JumpButton from './buttons/JumpButton.js';
 import AttackButton from './buttons/AttackButton.js';
+import ShopButton from './buttons/ShopButton.js';
 import GameEvents from '../events/GameEvents.js';
 import { INPUT_EVENTS, CHARACTER_EVENTS, UI_EVENTS } from '../events/EventTypes.js';
 
@@ -149,7 +150,8 @@ export default class ButtonSystem {
     return {
       move: new MoveButton(),
       jump: new JumpButton(),
-      attack: new AttackButton()
+      attack: new AttackButton(),
+      shop: new ShopButton()
     };
   }
   
@@ -213,13 +215,28 @@ export default class ButtonSystem {
       btnHeight
     );
     
+    // Position shop button next to the collectible display
+    // Get collectible display dimensions
+    const displayWidth = 100; // Default collectible display width
+    const displayHeight = 40; // Default collectible display height
+    const padding = 10;
+    
+    // Position shop button to the right of collectible display
+    this.buttons.shop.updatePosition(
+      padding * 2 + displayWidth, // 10px gap between display and button
+      padding, // Same y position as collectible display
+      btnHeight * 2, // Width
+      btnHeight // Height
+    );
+    
     // Emit UI update event
     GameEvents.emitUI(UI_EVENTS.UPDATE, {
       type: 'button_positions',
       buttons: {
         move: { x: this.buttons.move.x, y: this.buttons.move.y, width: btnWidth, height: btnHeight },
         jump: { x: this.buttons.jump.x, y: this.buttons.jump.y, width: btnWidth, height: btnHeight },
-        attack: { x: this.buttons.attack.x, y: this.buttons.attack.y, width: btnWidth, height: btnHeight }
+        attack: { x: this.buttons.attack.x, y: this.buttons.attack.y, width: btnWidth, height: btnHeight },
+        shop: { x: this.buttons.shop.x, y: this.buttons.shop.y, width: btnHeight * 2, height: btnHeight }
       }
     });
   }
