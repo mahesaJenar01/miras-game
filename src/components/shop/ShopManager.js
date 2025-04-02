@@ -4,7 +4,7 @@
  */
 import ShopMenu from './ShopMenu.js';
 import GameEvents from '../../events/GameEvents.js';
-import { SHOP_EVENTS, INPUT_EVENTS } from '../../events/EventTypes.js';
+import { SHOP_EVENTS, INPUT_EVENTS, GAME_EVENTS } from '../../events/EventTypes.js';
 
 class ShopManager {
   /**
@@ -47,8 +47,23 @@ class ShopManager {
     });
     
     // Listen for game resize to update positions
-    GameEvents.on('game:resize', () => {
-      this.shopMenu.handleResize();
+    GameEvents.on(GAME_EVENTS.RESIZE, () => {
+      if (this.shopMenu) {
+        this.shopMenu.handleResize();
+      }
+    });
+    
+    // Listen for shop events directly
+    GameEvents.on(SHOP_EVENTS.OPEN, () => {
+      console.log("Shop opened");
+    });
+    
+    GameEvents.on(SHOP_EVENTS.CLOSE, () => {
+      console.log("Shop closed");
+    });
+    
+    GameEvents.on(SHOP_EVENTS.CARD_SELECT, (data) => {
+      console.log(`Card selected: ${data.cardIndex}`);
     });
   }
   

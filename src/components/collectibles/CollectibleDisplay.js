@@ -1,10 +1,9 @@
 /**
  * CollectibleDisplay.js - Displays the collected items count
- * Creates and updates a UI element for showing the current score
- * Updated to display in the top-left with tulip icon
+ * Updated with improved horizontal alignment with shop button
  */
 import GameEvents from '../../events/GameEvents.js';
-import { COLLECTIBLE_EVENTS, GAME_EVENTS } from '../../events/EventTypes.js';
+import { COLLECTIBLE_EVENTS, GAME_EVENTS, UI_EVENTS } from '../../events/EventTypes.js';
 
 class CollectibleDisplay {
   /**
@@ -16,10 +15,14 @@ class CollectibleDisplay {
     this.context = context;
     this.canvas = canvas;
     this.count = 0;
+    
+    // Default dimensions - will be updated when UI event is received
     this.displayWidth = 100;
     this.displayHeight = 40;
     this.padding = 10;
     this.cornerRadius = 10;
+    
+    // Visual properties
     this.backgroundColor = 'rgba(0, 0, 0, 0.5)';
     this.textColor = '#FFFFFF';
     this.tulipColor = '#FF5555'; // Red tulip color
@@ -38,10 +41,21 @@ class CollectibleDisplay {
     
     // Register event listeners
     this.registerEventListeners();
+    
+    // Emit an event to notify that this component is ready
+    // This will help ButtonSystem know our dimensions
+    setTimeout(() => {
+      GameEvents.emitUI(UI_EVENTS.UPDATE, {
+        type: 'collectible_display_ready',
+        displayWidth: this.displayWidth,
+        displayHeight: this.displayHeight,
+        padding: this.padding
+      });
+    }, 0);
   }
   
   /**
-   * Register event listeners for display updates
+   * Register event listeners for display updates and to match button sizes
    */
   registerEventListeners() {
     // Listen for count updates
@@ -54,12 +68,53 @@ class CollectibleDisplay {
       this.startAnimation();
     });
     
-    // Listen for game resize to update position
-    GameEvents.on(GAME_EVENTS.RESIZE, (data) => {
-      if (data.width) {
-        this.handleResize(data.width);
+    // Listen for UI updates to match button dimensions
+    GameEvents.on(UI_EVENTS.UPDATE, (data) => {
+      if (data.type === 'button_positions' && data.buttons) {
+        this.updateDimensions(data.buttons);
+        // After updating dimensions, notify others of our new size
+        GameEvents.emitUI(UI_EVENTS.UPDATE, {
+          type: 'collectible_display_updated',
+          x: this.x,
+          y: this.y,
+          width: this.displayWidth,
+          height: this.displayHeight,
+          padding: this.padding
+        });
       }
     });
+    
+    // Listen for game resize to update position
+    GameEvents.on(GAME_EVENTS.RESIZE, () => {
+      this.handleResize();
+    });
+  }
+  
+  /**
+   * Update dimensions to match other UI buttons
+   * @param {Object} buttons - Button position and size information
+   */
+  updateDimensions(buttons) {
+    // Use the move button (or any other button) as reference
+    const referenceButton = buttons.move || buttons.shop;
+    
+    if (referenceButton) {
+      // Match the height of the button
+      this.displayHeight = referenceButton.height;
+      
+      // Make width proportional but sufficient for content
+      this.displayWidth = this.displayHeight * 2.5;
+      
+      // Update corner radius to match button style
+      this.cornerRadius = this.displayHeight * 0.2;
+      
+      // Update tulip size proportional to the display height
+      this.tulipSize = this.displayHeight * 0.4;
+      
+      // Always position at the top-left with padding
+      this.x = this.padding;
+      this.y = this.padding;
+    }
   }
   
   /**
@@ -79,12 +134,22 @@ class CollectibleDisplay {
   }
   
   /**
-   * Handle canvas resize
-   * @param {number} canvasWidth - New canvas width
+   * Handle canvas resize - adjust display positioning
    */
-  handleResize(canvasWidth) {
-    // Update position to stay in top-left corner
+  handleResize() {
+    // Always position in top-left with padding
     this.x = this.padding;
+    this.y = this.padding;
+    
+    // Notify others of position change after resize
+    GameEvents.emitUI(UI_EVENTS.UPDATE, {
+      type: 'collectible_display_updated',
+      x: this.x,
+      y: this.y,
+      width: this.displayWidth,
+      height: this.displayHeight,
+      padding: this.padding
+    });
   }
   
   /**
@@ -113,7 +178,7 @@ class CollectibleDisplay {
   }
   
   /**
-   * Draw the collectible display
+   * Draw the collectible display with improved sizing and layout
    */
   draw() {
     const { context, x, y, displayWidth, displayHeight, cornerRadius } = this;
@@ -130,35 +195,35 @@ class CollectibleDisplay {
     
     // Draw rounded rectangle background
     context.beginPath();
-    context.moveTo(x + cornerRadius, y);
-    context.lineTo(x + displayWidth - cornerRadius, y);
-    context.quadraticCurveTo(x + displayWidth, y, x + displayWidth, y + cornerRadius);
-    context.lineTo(x + displayWidth, y + displayHeight - cornerRadius);
-    context.quadraticCurveTo(x + displayWidth, y + displayHeight, x + displayWidth - cornerRadius, y + displayHeight);
-    context.lineTo(x + cornerRadius, y + displayHeight);
-    context.quadraticCurveTo(x, y + displayHeight, x, y + displayHeight - cornerRadius);
-    context.lineTo(x, y + cornerRadius);
-    context.quadraticCurveTo(x, y, x + cornerRadius, y);
-    context.closePath();
-    
-    // Fill background
+    this.roundRect(context, x, y, displayWidth, displayHeight, cornerRadius);
     context.fillStyle = this.backgroundColor;
     context.fill();
     
-    // Draw tulip icon
-    const tulipX = x + this.tulipSize;
+    // Add subtle border for consistency with buttons
+    context.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    context.lineWidth = 1;
+    context.stroke();
+    
+    // Draw tulip icon - centered vertically
+    const tulipX = x + displayHeight / 2;
     const tulipY = y + displayHeight / 2;
     
     // Draw the tulip
     this.drawTulipIcon(tulipX, tulipY, this.tulipSize);
     
-    // Draw count text
-    context.font = 'bold 18px Arial';
+    // Calculate appropriate font size based on display height
+    const fontSize = Math.min(displayHeight * 0.5, 24);
+    
+    // Draw count text - positioned to avoid overlap with tulip
+    context.font = `bold ${fontSize}px Arial`;
     context.fillStyle = this.textColor;
     context.textAlign = 'left';
     context.textBaseline = 'middle';
+    
+    // Position text after the tulip with proper spacing
+    const textX = x + displayHeight * 0.8;
     const countText = `× ${this.count}`;
-    context.fillText(countText, x + this.tulipSize * 2 + 5, y + displayHeight / 2);
+    context.fillText(countText, textX, y + displayHeight / 2);
     
     // Restore context state
     context.restore();
@@ -203,6 +268,31 @@ class CollectibleDisplay {
     context.fillStyle = this.tulipColor;
     context.fill();
     context.closePath();
+  }
+  
+  /**
+   * Helper function to draw rounded rectangles
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   * @param {number} x - X coordinate
+   * @param {number} y - Y coordinate
+   * @param {number} width - Width of rectangle
+   * @param {number} height - Height of rectangle
+   * @param {number} radius - Corner radius
+   */
+  roundRect(ctx, x, y, width, height, radius) {
+    if (radius > height / 2) radius = height / 2;
+    if (radius > width / 2) radius = width / 2;
+    
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
   }
 }
 

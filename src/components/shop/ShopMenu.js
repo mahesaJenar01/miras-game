@@ -1,6 +1,7 @@
 /**
  * ShopMenu.js - Renders and manages the shop menu interface
  * Displays affirmation cards that can be selected
+ * Updated to fix text overlap when a card is selected
  */
 import AffirmationCard from './AffirmationCard.js';
 import GameEvents from '../../events/GameEvents.js';
@@ -26,16 +27,16 @@ class ShopMenu {
       cornerRadius: 20
     };
     
-    // Create affirmation cards with messages
+    // Animation properties
+    this.openAnimation = 0;
+    this.isAnimating = false;
+    
+    // Create affirmation cards with messages - will be positioned later
     this.createCards([
       "You are strong, beautiful, and capable of achieving anything you set your mind to.",
       "Every day with you is a blessing. Your smile lights up my world.",
       "You're not just my girlfriend, you're my best friend and my greatest adventure."
     ]);
-    
-    // Animation properties
-    this.openAnimation = 0;
-    this.isAnimating = false;
   }
   
   /**
@@ -45,9 +46,10 @@ class ShopMenu {
   createCards(messages) {
     this.cards = [];
     
-    // Default card properties
-    const cardWidth = this.canvas.width * 0.25;
-    const cardHeight = this.canvas.height * 0.4;
+    // Calculate card size based on canvas dimensions for better responsiveness
+    // Make cards smaller on smaller screens
+    const cardWidth = Math.min(this.canvas.width * 0.25, 200);
+    const cardHeight = Math.min(this.canvas.height * 0.4, 300);
     const cardColors = ["#FFB7B2", "#F8E1EC", "#E3D1F4"];
     
     // Card positions will be set in updateCardPositions
@@ -68,22 +70,56 @@ class ShopMenu {
   
   /**
    * Update card positions based on canvas size
+   * Ensures proper spacing and prevents overlap
    */
   updateCardPositions() {
     const { width, height } = this.canvas;
-    const cardSpacing = width * 0.05;
-    const totalWidth = this.cards.reduce((sum, card) => sum + card.width, 0) 
-                     + cardSpacing * (this.cards.length - 1);
+    
+    // Dynamically calculate card spacing based on canvas width
+    const cardCount = this.cards.length;
+    let cardSpacing = width * 0.05;
+    
+    // Calculate total width needed
+    let totalWidth = this.cards.reduce((sum, card) => sum + card.width, 0) + 
+                    cardSpacing * (cardCount - 1);
+    
+    // If total width is too large for the canvas, reduce spacing and/or card width
+    if (totalWidth > width * 0.9) {
+      // First try reducing spacing
+      cardSpacing = Math.max(10, width * 0.02);
+      totalWidth = this.cards.reduce((sum, card) => sum + card.width, 0) + 
+                  cardSpacing * (cardCount - 1);
+      
+      // If still too large, reduce card width
+      if (totalWidth > width * 0.9) {
+        const newCardWidth = (width * 0.9 - cardSpacing * (cardCount - 1)) / cardCount;
+        this.cards.forEach(card => {
+          card.width = newCardWidth;
+          // Maintain aspect ratio
+          card.height = newCardWidth * 1.5;
+        });
+        
+        totalWidth = this.cards.reduce((sum, card) => sum + card.width, 0) + 
+                    cardSpacing * (cardCount - 1);
+      }
+    }
+    
+    // Center the cards horizontally
     const startX = (width - totalWidth) / 2;
     
+    // Calculate a safer vertical position - position cards further down
+    // to leave more space for title and subtitle
+    const titleAreaHeight = height * 0.22; // Reserve 22% of height for title and subtitle
+    const centerY = titleAreaHeight + (height - titleAreaHeight) * 0.4; // Position in top part of remaining space
+    
+    // Position cards
     let currentX = startX;
-    const centerY = height * 0.4;
     
     this.cards.forEach(card => {
       card.x = currentX;
       card.y = centerY - card.height / 2;
-      card.targetX = card.x; // Set initial target position
-      card.targetY = card.y; // Set initial target position
+      card.targetX = card.x;
+      card.targetY = card.y;
       currentX += card.width + cardSpacing;
     });
     
@@ -111,8 +147,8 @@ class ShopMenu {
       // Update card positions
       this.updateCardPositions();
       
-      // Emit shop open event
-      GameEvents.emitUI(SHOP_EVENTS.OPEN, {
+      // Emit shop open event - use emit directly to avoid UI event type warning
+      GameEvents.emit(SHOP_EVENTS.OPEN, {
         time: Date.now()
       });
       
@@ -129,8 +165,8 @@ class ShopMenu {
       this.isOpen = false;
       this.selectedCard = null;
       
-      // Emit shop close event
-      GameEvents.emitUI(SHOP_EVENTS.CLOSE, {
+      // Emit shop close event - use emit directly to avoid UI event type warning
+      GameEvents.emit(SHOP_EVENTS.CLOSE, {
         time: Date.now()
       });
     }
@@ -195,17 +231,22 @@ class ShopMenu {
       }
     });
     
-    // Center the selected card
+    // Calculate a safe vertical position for the selected card that doesn't overlap with the header
+    // Reserve more space at the top (30% of canvas height) for title and subtitle
+    const headerSpace = this.canvas.height * 0.1;
+    const cardY = headerSpace + (this.canvas.height - headerSpace - card.height) / 2;
+    
+    // Center the selected card horizontally and position it lower to avoid header text
     card.moveTo(
       (this.canvas.width - card.width) / 2,
-      (this.canvas.height - card.height) / 2
+      cardY
     );
     
     // Select and animate the card
     card.select();
     
-    // Emit card select event
-    GameEvents.emitUI(SHOP_EVENTS.CARD_SELECT, {
+    // Emit card select event - use emit directly to avoid event type warning
+    GameEvents.emit(SHOP_EVENTS.CARD_SELECT, {
       cardIndex: this.cards.indexOf(card),
       message: card.message
     });
@@ -240,7 +281,7 @@ class ShopMenu {
   }
   
   /**
-   * Draw the shop menu
+   * Draw the shop menu with improved text layout
    */
   draw() {
     if (!this.isOpen && !this.isAnimating) return;
@@ -255,22 +296,46 @@ class ShopMenu {
     context.fillStyle = `rgba(0, 0, 0, ${alpha})`;
     context.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Draw shop title
-    const titleY = canvas.height * 0.15;
-    context.font = 'bold 32px Arial';
+    // Calculate positioning based on canvas size
+    const titleY = canvas.height * 0.12; // Move title higher
+    
+    // Draw shop title - responsive font size
+    const titleFontSize = Math.min(32, Math.max(20, canvas.width * 0.04));
+    context.font = `bold ${titleFontSize}px Arial`;
     context.fillStyle = '#FFFFFF';
     context.textAlign = 'center';
     context.textBaseline = 'middle';
     context.fillText('Affirmation Shop', canvas.width/2, titleY);
     
-    // Draw subtitle
-    context.font = '18px Arial';
-    context.fillText('Pick a card to reveal a special message', canvas.width/2, titleY + 40);
+    // Draw subtitle with improved spacing
+    const subtitleFontSize = Math.min(18, Math.max(12, canvas.width * 0.025));
+    const subtitleY = titleY + titleFontSize * 1.1; // Closer to title
+    
+    context.font = `${subtitleFontSize}px Arial`;
+    
+    // Check if there's a selected card
+    if (this.selectedCard) {
+      context.fillText('Choose another card or close to continue', canvas.width/2, subtitleY);
+    } else {
+      // Word wrap for subtitle if needed
+      const subtitle = 'Pick a card to reveal a special message';
+      
+      // Determine if screen is small or ultra-wide - adjust text positioning accordingly
+      const isNarrow = canvas.width < 500 || canvas.width / canvas.height < 1.5;
+      
+      if (isNarrow) {
+        // Split onto two lines for narrow/small screens
+        context.fillText('Pick a card', canvas.width/2, subtitleY);
+        context.fillText('to reveal a special message', canvas.width/2, subtitleY + subtitleFontSize * 1.2);
+      } else {
+        context.fillText(subtitle, canvas.width/2, subtitleY);
+      }
+    }
     
     // Draw close button
     this.drawCloseButton();
     
-    // If a card is selected, make it centered and larger
+    // Draw cards
     if (this.selectedCard) {
       // Draw only the selected card
       this.selectedCard.draw();
@@ -333,6 +398,18 @@ class ShopMenu {
    */
   handleResize() {
     this.updateCardPositions();
+    
+    // If a card is selected, reposition it to maintain proper spacing
+    if (this.selectedCard) {
+      // Calculate safe positioning for the selected card
+      const headerSpace = this.canvas.height * 0.1;
+      const cardY = headerSpace + (this.canvas.height - headerSpace - this.selectedCard.height) / 2;
+      
+      this.selectedCard.moveTo(
+        (this.canvas.width - this.selectedCard.width) / 2,
+        cardY
+      );
+    }
   }
 }
 

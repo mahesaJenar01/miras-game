@@ -10,7 +10,7 @@ import { INPUT_EVENTS, CHARACTER_EVENTS, UI_EVENTS } from '../events/EventTypes.
 /**
  * ButtonSystem - Central coordinator for all button-related functionality
  * Manages button creation, positioning, and actions using the event system
- * Updated to support simultaneous button actions
+ * Updated to coordinate button positioning with collectible display
  */
 export default class ButtonSystem {
   /**
@@ -23,6 +23,15 @@ export default class ButtonSystem {
     this.game = game;
     this.canvas = canvas;
     this.context = context;
+    
+    // Store collectible display info for coordination
+    this.collectibleDisplayInfo = {
+      width: 0,
+      height: 0,
+      x: 0,
+      y: 0,
+      padding: 10
+    };
     
     // Create button instances (without positions initially)
     this.buttons = this.createButtons();
@@ -98,6 +107,21 @@ export default class ButtonSystem {
     GameEvents.on(CHARACTER_EVENTS.ATTACK_END, () => {
       this.buttons.attack.setAttacking(false);
     });
+    
+    // Listen for collectible display updates to coordinate positioning
+    GameEvents.on(UI_EVENTS.UPDATE, (data) => {
+      if (data.type === 'collectible_display_updated' || data.type === 'collectible_display_ready') {
+        // Store collectible display info for positioning coordination
+        if (data.width) this.collectibleDisplayInfo.width = data.width;
+        if (data.height) this.collectibleDisplayInfo.height = data.height;
+        if (data.x !== undefined) this.collectibleDisplayInfo.x = data.x;
+        if (data.y !== undefined) this.collectibleDisplayInfo.y = data.y;
+        if (data.padding !== undefined) this.collectibleDisplayInfo.padding = data.padding;
+        
+        // Update button positions to maintain proper layout
+        this.updateButtonPositions();
+      }
+    });
   }
   
   /**
@@ -167,7 +191,7 @@ export default class ButtonSystem {
   }
   
   /**
-   * Update positions of all buttons based on canvas dimensions
+   * Update positions of all buttons based on canvas dimensions and collectible display
    */
   updateButtonPositions() {
     const canvas = this.canvas;
@@ -215,18 +239,19 @@ export default class ButtonSystem {
       btnHeight
     );
     
-    // Position shop button next to the collectible display
-    // Get collectible display dimensions
-    const displayWidth = 100; // Default collectible display width
-    const displayHeight = 40; // Default collectible display height
-    const padding = 10;
-    
     // Position shop button to the right of collectible display
+    // Use the collectible display info for proper placement
+    const padding = this.collectibleDisplayInfo.padding || 10;
+    const displayWidth = this.collectibleDisplayInfo.width || 100;
+    const displayHeight = this.collectibleDisplayInfo.height || 40;
+    
+    // Position shop button at same Y as collectible display,
+    // but to its right with appropriate padding
     this.buttons.shop.updatePosition(
-      padding * 2 + displayWidth, // 10px gap between display and button
-      padding, // Same y position as collectible display
+      displayWidth + padding * 2, // Position after the collectible display with padding
+      padding, // Same Y position as collectible display
       btnHeight * 2, // Width
-      btnHeight // Height
+      btnHeight * 0.8 // Height - slightly less tall than game buttons
     );
     
     // Emit UI update event
@@ -236,7 +261,7 @@ export default class ButtonSystem {
         move: { x: this.buttons.move.x, y: this.buttons.move.y, width: btnWidth, height: btnHeight },
         jump: { x: this.buttons.jump.x, y: this.buttons.jump.y, width: btnWidth, height: btnHeight },
         attack: { x: this.buttons.attack.x, y: this.buttons.attack.y, width: btnWidth, height: btnHeight },
-        shop: { x: this.buttons.shop.x, y: this.buttons.shop.y, width: btnHeight * 2, height: btnHeight }
+        shop: { x: this.buttons.shop.x, y: this.buttons.shop.y, width: btnHeight * 2, height: btnHeight * 0.8 }
       }
     });
   }

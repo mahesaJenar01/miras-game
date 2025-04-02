@@ -1,6 +1,7 @@
 /**
  * EventTypes.js - Constants for all event types
  * Categorized by domain to ensure consistency and prevent typos
+ * Updated to include Shop events in the UI category
  */
 
 /**
@@ -102,7 +103,13 @@ export const UI_EVENTS = {
   
   // Button-specific UI events (complementary to input events)
   BUTTON_STATE_CHANGE: 'ui:button_state_change',
-  BUTTON_COOLDOWN_UPDATE: 'ui:button_cooldown_update'
+  BUTTON_COOLDOWN_UPDATE: 'ui:button_cooldown_update',
+  
+  // Shop-related UI events (moved from SHOP_EVENTS)
+  SHOP_OPEN: 'ui:shop_open',
+  SHOP_CLOSE: 'ui:shop_close',
+  SHOP_CARD_SELECT: 'ui:shop_card_select',
+  SHOP_CARD_REVEAL: 'ui:shop_card_reveal'
 };
 
 /**
@@ -133,6 +140,7 @@ export const COLLECTIBLE_EVENTS = {
 
 /**
  * Shop-related events
+ * These are globally accessible events specific to the shop system
  */
 export const SHOP_EVENTS = {
   OPEN: 'shop:open',

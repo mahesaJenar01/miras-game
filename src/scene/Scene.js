@@ -83,40 +83,77 @@ class Scene {
   
   /**
    * Initialize all scene components
+   * Added defensive checks to prevent errors with undefined config
    */
   initialize() {
     const { context, canvas, config } = this;
     
+    // Ensure config exists to prevent errors
+    if (!config) {
+      console.warn("Scene initialized with undefined config. Using defaults.");
+      return;
+    }
+    
     // Create sky
     this.sky = new Sky(context, canvas.width, canvas.height);
     
-    // Create sun
-    this.sun = new Sun(
-      context, 
-      config.sun.x, 
-      config.sun.y, 
-      config.sun.radius
-    );
-    
-    // Create clouds
-    this.clouds = config.clouds.map(cloudConfig => 
-      new Cloud(
+    // Create sun with safer access to config
+    if (config.sun) {
+      this.sun = new Sun(
+        context, 
+        config.sun.x || canvas.width * 0.75, 
+        config.sun.y || canvas.height * 0.2, 
+        config.sun.radius || canvas.height * 0.06
+      );
+    } else {
+      // Create with defaults if config.sun is missing
+      this.sun = new Sun(
         context,
-        cloudConfig.x,
-        cloudConfig.y,
-        cloudConfig.size,
-        cloudConfig.speed
-      )
-    );
+        canvas.width * 0.75,
+        canvas.height * 0.2,
+        canvas.height * 0.06
+      );
+    }
     
-    // Create ground
-    this.ground = new Ground(
-      context,
-      config.ground.x,
-      config.ground.y,
-      config.ground.height,
-      config.ground.width
-    );
+    // Create clouds with safer array handling
+    if (config.clouds && Array.isArray(config.clouds)) {
+      this.clouds = config.clouds.map(cloudConfig => 
+        new Cloud(
+          context,
+          cloudConfig.x || Math.random() * canvas.width,
+          cloudConfig.y || Math.random() * canvas.height * 0.3,
+          cloudConfig.size || canvas.height * 0.03,
+          cloudConfig.speed || 0.1
+        )
+      );
+    } else {
+      // Create default clouds if config.clouds is missing
+      this.clouds = [
+        new Cloud(context, canvas.width * 0.1, canvas.height * 0.15, canvas.height * 0.03, 0.1),
+        new Cloud(context, canvas.width * 0.5, canvas.height * 0.25, canvas.height * 0.04, 0.05),
+        new Cloud(context, canvas.width * 0.8, canvas.height * 0.1, canvas.height * 0.035, 0.07)
+      ];
+    }
+    
+    // Create ground with safer access
+    if (config.ground) {
+      this.ground = new Ground(
+        context,
+        config.ground.x || 0,
+        config.ground.y || canvas.height * 0.8,
+        config.ground.height || canvas.height * 0.2,
+        config.ground.width || canvas.width
+      );
+    } else {
+      // Create with defaults if config.ground is missing
+      this.ground = new Ground(
+        context,
+        0,
+        canvas.height * 0.8,
+        canvas.height * 0.2,
+        canvas.width
+      );
+    }
     
     // Initialize world offset
     this.currentWorldOffset = 0;
