@@ -194,77 +194,83 @@ export default class ButtonSystem {
    * Update positions of all buttons based on canvas dimensions and collectible display
    */
   updateButtonPositions() {
-    const canvas = this.canvas;
-    const canvasHeight = canvas.height;
-    const canvasWidth = canvas.width;
-    
-    // Calculate ground positioning based on current canvas dimensions
-    const groundY = canvasHeight * 0.8;
-    const groundHeight = canvasHeight * 0.2;
-    const grassHeight = groundHeight * 0.3; // top portion of the ground (grass)
-    const dirtHeight = groundHeight * 0.7;  // remaining (dirt)
-    
-    // Calculate the vertical center of the dirt area
-    const dirtCenterY = groundY + grassHeight + (dirtHeight / 2);
-    
-    // Define button dimensions relative to canvas size for better responsiveness
-    const btnHeight = Math.min(dirtHeight * 0.7, canvasHeight * 0.08); // button height with max constraint
-    const btnWidth = btnHeight * 2;     // width is set to twice the height
-    
-    // Define horizontal gaps that scale with canvas size
-    const sideGap = Math.max(10, canvasWidth * 0.02);     // gap from canvas left/right edges (minimum 10px)
-    const buttonGap = Math.max(5, canvasWidth * 0.01);   // gap between Attack and Jump buttons (minimum 5px)
-    
-    // Update Move button position
-    this.buttons.move.updatePosition(
-      sideGap,
-      dirtCenterY - btnHeight / 2,
-      btnWidth,
-      btnHeight
-    );
-    
-    // Update Jump button position
-    this.buttons.jump.updatePosition(
-      canvasWidth - sideGap - btnWidth,
-      dirtCenterY - btnHeight / 2,
-      btnWidth,
-      btnHeight
-    );
-    
-    // Update Attack button position
-    this.buttons.attack.updatePosition(
-      canvasWidth - sideGap - btnWidth - buttonGap - btnWidth,
-      dirtCenterY - btnHeight / 2,
-      btnWidth,
-      btnHeight
-    );
-    
-    // Position shop button to the right of collectible display
-    // Use the collectible display info for proper placement
-    const padding = this.collectibleDisplayInfo.padding || 10;
-    const displayWidth = this.collectibleDisplayInfo.width || 100;
-    const displayHeight = this.collectibleDisplayInfo.height || 40;
-    
-    // Position shop button at same Y as collectible display,
-    // but to its right with appropriate padding
-    this.buttons.shop.updatePosition(
-      displayWidth + padding * 2, // Position after the collectible display with padding
-      padding, // Same Y position as collectible display
-      btnHeight * 2, // Width
-      btnHeight * 0.8 // Height - slightly less tall than game buttons
-    );
-    
-    // Emit UI update event
-    GameEvents.emitUI(UI_EVENTS.UPDATE, {
-      type: 'button_positions',
-      buttons: {
-        move: { x: this.buttons.move.x, y: this.buttons.move.y, width: btnWidth, height: btnHeight },
-        jump: { x: this.buttons.jump.x, y: this.buttons.jump.y, width: btnWidth, height: btnHeight },
-        attack: { x: this.buttons.attack.x, y: this.buttons.attack.y, width: btnWidth, height: btnHeight },
-        shop: { x: this.buttons.shop.x, y: this.buttons.shop.y, width: btnHeight * 2, height: btnHeight * 0.8 }
-      }
-    });
-  }
+  // Add this flag to prevent infinite loops
+  if (this._isUpdatingPositions) return;
+  this._isUpdatingPositions = true;
+
+  const canvas = this.canvas;
+  const canvasHeight = canvas.height;
+  const canvasWidth = canvas.width;
+  
+  // Calculate ground positioning based on current canvas dimensions
+  const groundY = canvasHeight * 0.8;
+  const groundHeight = canvasHeight * 0.2;
+  const grassHeight = groundHeight * 0.3; // top portion of the ground (grass)
+  const dirtHeight = groundHeight * 0.7;  // remaining (dirt)
+  
+  // Calculate the vertical center of the dirt area
+  const dirtCenterY = groundY + grassHeight + (dirtHeight / 2);
+  
+  // Define button dimensions relative to canvas size for better responsiveness
+  const btnHeight = Math.min(dirtHeight * 0.7, canvasHeight * 0.08); // button height with max constraint
+  const btnWidth = btnHeight * 2;     // width is set to twice the height
+  
+  // Define horizontal gaps that scale with canvas size
+  const sideGap = Math.max(10, canvasWidth * 0.02);     // gap from canvas left/right edges (minimum 10px)
+  const buttonGap = Math.max(5, canvasWidth * 0.01);   // gap between Attack and Jump buttons (minimum 5px)
+  
+  // Update Move button position
+  this.buttons.move.updatePosition(
+    sideGap,
+    dirtCenterY - btnHeight / 2,
+    btnWidth,
+    btnHeight
+  );
+  
+  // Update Jump button position
+  this.buttons.jump.updatePosition(
+    canvasWidth - sideGap - btnWidth,
+    dirtCenterY - btnHeight / 2,
+    btnWidth,
+    btnHeight
+  );
+  
+  // Update Attack button position
+  this.buttons.attack.updatePosition(
+    canvasWidth - sideGap - btnWidth - buttonGap - btnWidth,
+    dirtCenterY - btnHeight / 2,
+    btnWidth,
+    btnHeight
+  );
+  
+  // Position shop button to the right of collectible display
+  const padding = this.collectibleDisplayInfo.padding || 10;
+  const displayWidth = this.collectibleDisplayInfo.width || 100;
+  const displayHeight = this.collectibleDisplayInfo.height || 40;
+  
+  // Position shop button at same Y as collectible display with matching height
+  this.buttons.shop.updatePosition(
+    displayWidth + padding * 2, // Position after the collectible display with padding
+    padding, // Same Y position as collectible display
+    displayHeight * 2, // Width that's proportional to the display height
+    displayHeight // Exactly match the collectible display height
+  );
+  
+  // Emit UI update event
+  GameEvents.emitUI(UI_EVENTS.UPDATE, {
+    type: 'button_positions',
+    buttons: {
+      move: { x: this.buttons.move.x, y: this.buttons.move.y, width: btnWidth, height: btnHeight },
+      jump: { x: this.buttons.jump.x, y: this.buttons.jump.y, width: btnWidth, height: btnHeight },
+      attack: { x: this.buttons.attack.x, y: this.buttons.attack.y, width: btnWidth, height: btnHeight },
+      shop: { x: this.buttons.shop.x, y: this.buttons.shop.y, width: displayHeight * 2, height: displayHeight }
+    }
+  });
+  
+  // Reset the update flag to allow future updates
+  this._isUpdatingPositions = false;
+}
+
   
   /**
    * Draw all buttons

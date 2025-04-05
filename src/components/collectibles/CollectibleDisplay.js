@@ -49,9 +49,11 @@ class CollectibleDisplay {
         type: 'collectible_display_ready',
         displayWidth: this.displayWidth,
         displayHeight: this.displayHeight,
-        padding: this.padding
+        padding: this.padding,
+        x: this.x,
+        y: this.y
       });
-    }, 0);
+    }, 0);    
   }
   
   /**
@@ -95,6 +97,10 @@ class CollectibleDisplay {
    * @param {Object} buttons - Button position and size information
    */
   updateDimensions(buttons) {
+    // Add this flag to prevent infinite loops
+    if (this._isUpdatingDimensions) return;
+    this._isUpdatingDimensions = true;
+    
     // Use the move button (or any other button) as reference
     const referenceButton = buttons.move || buttons.shop;
     
@@ -115,7 +121,22 @@ class CollectibleDisplay {
       this.x = this.padding;
       this.y = this.padding;
     }
-  }
+    
+    // Notify others of our new size after a short delay to prevent immediate circular updates
+    setTimeout(() => {
+      GameEvents.emitUI(UI_EVENTS.UPDATE, {
+        type: 'collectible_display_updated',
+        x: this.x,
+        y: this.y,
+        width: this.displayWidth,
+        height: this.displayHeight,
+        padding: this.padding
+      });
+      
+      // Reset the update flag
+      this._isUpdatingDimensions = false;
+    }, 0);
+  }  
   
   /**
    * Update the displayed count
@@ -150,7 +171,7 @@ class CollectibleDisplay {
       height: this.displayHeight,
       padding: this.padding
     });
-  }
+  }  
   
   /**
    * Update the display animation

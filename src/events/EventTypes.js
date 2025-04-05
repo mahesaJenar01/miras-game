@@ -146,5 +146,8 @@ export const SHOP_EVENTS = {
   OPEN: 'shop:open',
   CLOSE: 'shop:close',
   CARD_SELECT: 'shop:card_select',
-  CARD_REVEAL: 'shop:card_reveal'
+  CARD_REVEAL: 'shop:card_reveal',
+  CARD_PURCHASE_ATTEMPT: 'shop:card_purchase_attempt',
+  CARD_PURCHASE_SUCCESS: 'shop:card_purchase_success',
+  CARD_PURCHASE_FAILURE: 'shop:card_purchase_failure'
 };
