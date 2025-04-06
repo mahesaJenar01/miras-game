@@ -1,7 +1,6 @@
 /**
  * AffirmationCard.js - Represents an affirmation card in the shop
- * Contains a sweet message for the girlfriend
- * Updated to include price display and purchase functionality
+ * Improved with more stable proportions and scaling
  */
 class AffirmationCard {
   /**
@@ -24,63 +23,54 @@ class AffirmationCard {
     this.message = message;
     this.color = color;
     this.price = price;
+    
+    // State flags
     this.isSelected = false;
     this.isRevealed = false;
-    this.animationProgress = 0;
-    this.cornerRadius = 10;
-    this.targetX = x; // For animation
-    this.targetY = y; // For animation
-    this.hoverScale = 1; // For hover effect
     this.isHovered = false;
+    
+    // Animation properties
+    this.animationProgress = 0;
+    this.hoverScale = 1;
+    this.targetX = x;
+    this.targetY = y;
+    
+    // Layout properties - store as ratios to maintain proportions
+    this.layoutRatios = {
+      cornerRadius: 0.06,     // Corner radius as ratio of card height
+      tagWidthRatio: 0.8,     // Price tag width as ratio of card width
+      tagHeightRatio: 0.12,   // Price tag height as ratio of card height
+      tagBottomMargin: 0.06,  // Price tag bottom margin as ratio of card height
+      heartSizeRatio: 0.28,   // Heart size as ratio of card height
+      tulipSizeRatio: 0.12,   // Flower icon size as ratio of tag height
+      questionMarkRatio: 0.4  // Question mark size as ratio of card height
+    };
+    
+    // Store computed colors to avoid recalculation
+    this.darkerColor = this.darkenColor(color, 30);
+    this.lighterColor = this.lightenColor(color, 40);
   }
   
   /**
-   * Draw the card
+   * Draw the card with all its elements based on current state
    */
   draw() {
-    const { context, x, y, width, height, cornerRadius } = this;
+    const { context } = this;
     
     // Save context state
     context.save();
     
-    // Apply scale animation if selected - use consistent scale for all states
-    if (this.isSelected) {
-      // Use a fixed scale of 1.1 regardless of animation progress
-      // This ensures card size is consistent across all states
-      const scale = 1.1;
-      context.translate(x + width/2, y + height/2);
-      context.scale(scale, scale);
-      context.translate(-(x + width/2), -(y + height/2));
-    } else if (this.isHovered) {
-      // Apply hover effect
-      const scale = this.hoverScale;
-      context.translate(x + width/2, y + height/2);
-      context.scale(scale, scale);
-      context.translate(-(x + width/2), -(y + height/2));
-    }
+    // Apply scale effects based on selection or hover state
+    this.applyTransformations();
     
-    // Draw card background
-    context.beginPath();
-    this.roundRect(context, x, y, width, height, cornerRadius);
-    context.fillStyle = this.color;
-    context.fill();
+    // Draw the card base (background and border)
+    this.drawCardBase();
     
-    // Add a subtle border
-    context.strokeStyle = this.darkenColor(this.color, 30);
-    context.lineWidth = 2;
-    context.stroke();
-    context.closePath();
-    
-    // If the card is revealed, show the message
+    // Draw card content based on revealed state
     if (this.isRevealed) {
       this.drawMessage();
     } else {
-      // Otherwise, draw a decorative back
       this.drawCardBack();
-    }
-
-    // Always draw the price tag (unless revealed)
-    if (!this.isRevealed) {
       this.drawPriceTag();
     }
     
@@ -89,72 +79,113 @@ class AffirmationCard {
   }
   
   /**
-   * Draw the card back (decorative elements)
+   * Apply transformations based on card state
    */
-  drawCardBack() {
+  applyTransformations() {
     const { context, x, y, width, height } = this;
     
-    // Draw a heart in the center
-    const heartSize = Math.min(width, height) * 0.3;
+    if (this.isSelected) {
+      // Fixed scale of 1.1 for selected cards
+      const scale = 1.1;
+      context.translate(x + width/2, y + height/2);
+      context.scale(scale, scale);
+      context.translate(-(x + width/2), -(y + height/2));
+    } else if (this.isHovered) {
+      // Apply hover effect
+      context.translate(x + width/2, y + height/2);
+      context.scale(this.hoverScale, this.hoverScale);
+      context.translate(-(x + width/2), -(y + height/2));
+    }
+  }
+  
+  /**
+   * Draw the base card (background and border)
+   */
+  drawCardBase() {
+    const { context, x, y, width, height, darkerColor, color } = this;
+    
+    // Calculate corner radius based on current card dimensions
+    const cornerRadius = Math.min(width, height) * this.layoutRatios.cornerRadius;
+    
+    context.beginPath();
+    this.roundRect(context, x, y, width, height, cornerRadius);
+    context.fillStyle = color;
+    context.fill();
+    
+    // Add a subtle border
+    context.strokeStyle = darkerColor;
+    context.lineWidth = Math.max(2, width * 0.01); // Ensure border is visible but proportional
+    context.stroke();
+    context.closePath();
+  }
+  
+  /**
+   * Draw the card back (when not revealed)
+   */
+  drawCardBack() {
+    const { context, x, y, width, height, darkerColor, lighterColor } = this;
+    
+    // Draw a heart in the center with proportional sizing
+    const heartSize = Math.min(width, height) * this.layoutRatios.heartSizeRatio;
     const heartX = x + width/2;
     const heartY = y + height/2;
     
     // Draw heart shape
     context.beginPath();
-    
-    // Top left curve
     context.moveTo(heartX, heartY + heartSize * 0.3);
     context.bezierCurveTo(
       heartX - heartSize * 0.5, heartY - heartSize * 0.3, 
       heartX - heartSize, heartY + heartSize * 0.3, 
       heartX, heartY + heartSize
     );
-    
-    // Top right curve
     context.bezierCurveTo(
       heartX + heartSize, heartY + heartSize * 0.3, 
       heartX + heartSize * 0.5, heartY - heartSize * 0.3, 
       heartX, heartY + heartSize * 0.3
     );
-    
-    context.fillStyle = this.darkenColor(this.color, 40);
+    context.fillStyle = darkerColor;
     context.fill();
     context.closePath();
     
-    // Draw a question mark
-    context.font = `bold ${Math.min(width, height) * 0.5}px Arial`;
-    context.fillStyle = this.lightenColor(this.color, 40);
+    // Draw a question mark with proportional font size
+    const questionMarkSize = Math.min(width, height) * this.layoutRatios.questionMarkRatio;
+    context.font = `bold ${questionMarkSize}px Arial`;
+    context.fillStyle = lighterColor;
     context.textAlign = 'center';
     context.textBaseline = 'middle';
     context.fillText("?", heartX, heartY);
   }
   
   /**
-   * Draw the affirmation message
+   * Draw the affirmation message (when revealed)
    */
   drawMessage() {
     const { context, x, y, width, height, message } = this;
     
-    // Set text properties
-    context.font = `bold ${Math.min(width * 0.07, 18)}px Arial`;
+    // Calculate font size proportional to card dimensions
+    const fontSize = Math.max(12, Math.min(width * 0.07, height * 0.05, 18));
+    context.font = `bold ${fontSize}px Arial`;
     context.fillStyle = "#333";
     context.textAlign = 'center';
     context.textBaseline = 'middle';
     
+    // Define text area with margins
+    const textMargin = width * 0.1;
+    const textAreaWidth = width - (textMargin * 2);
+    
     // Word wrap the message to fit the card
     const words = message.split(' ');
-    const lineHeight = Math.min(width * 0.08, 20);
-    const maxWidth = width * 0.8;
+    const lineHeight = fontSize * 1.3; // Line height based on font size
     
     let line = '';
     let lines = [];
     
+    // Build lines of text that fit within textAreaWidth
     for (let i = 0; i < words.length; i++) {
       const testLine = line + words[i] + ' ';
       const metrics = context.measureText(testLine);
-      const testWidth = metrics.width;
       
-      if (testWidth > maxWidth && i > 0) {
+      if (metrics.width > textAreaWidth && i > 0) {
         lines.push(line);
         line = words[i] + ' ';
       } else {
@@ -162,41 +193,52 @@ class AffirmationCard {
       }
     }
     
+    // Add the final line
     lines.push(line);
     
-    // Draw each line
-    const startY = y + height/2 - (lines.length * lineHeight)/2;
+    // Limit number of lines to fit in card
+    const maxLines = Math.floor((height * 0.8) / lineHeight);
+    if (lines.length > maxLines) {
+      lines = lines.slice(0, maxLines - 1);
+      lines.push("...");
+    }
+    
+    // Draw each line of text, centered in the card
+    const totalTextHeight = lines.length * lineHeight;
+    const startY = y + (height - totalTextHeight) / 2;
     
     lines.forEach((line, index) => {
-      context.fillText(line, x + width/2, startY + index * lineHeight);
+      context.fillText(line.trim(), x + width/2, startY + index * lineHeight);
     });
   }
-
+  
   /**
-   * Draw the price tag
+   * Draw the price tag at the bottom of the card
    */
   drawPriceTag() {
     const { context, x, y, width, height, price } = this;
     
-    // Make tag width adjust based on price digits
+    // Calculate tag dimensions based on card size and price digits
     const priceDigits = price.toString().length;
-    const tagWidth = Math.min(width * 0.8, Math.max(120, 80 + (priceDigits * 10)));
-    const tagHeight = Math.min(height * 0.15, 40);
+    const baseTagWidth = width * this.layoutRatios.tagWidthRatio;
+    const tagWidth = Math.min(baseTagWidth, Math.max(width * 0.6, baseTagWidth + (priceDigits * width * 0.03)));
+    const tagHeight = height * this.layoutRatios.tagHeightRatio;
     const tagX = x + (width - tagWidth) / 2;
-    const tagY = y + height - tagHeight - 15; // 15px from bottom for better visibility
+    const tagY = y + height - tagHeight - (height * this.layoutRatios.tagBottomMargin);
     
-    // Add a slight drop shadow for the tag
+    // Add drop shadow for depth
     context.save();
     context.shadowColor = 'rgba(0, 0, 0, 0.3)';
-    context.shadowBlur = 5;
-    context.shadowOffsetX = 2;
-    context.shadowOffsetY = 2;
+    context.shadowBlur = Math.max(3, height * 0.015);
+    context.shadowOffsetX = Math.max(1, height * 0.007);
+    context.shadowOffsetY = Math.max(1, height * 0.007);
     
-    // Draw tag background with gradient that matches card color
+    // Draw tag background with rounded corners
+    const tagCornerRadius = Math.min(tagHeight / 2, width * 0.04);
     context.beginPath();
-    this.roundRect(context, tagX, tagY, tagWidth, tagHeight, tagHeight / 2);
+    this.roundRect(context, tagX, tagY, tagWidth, tagHeight, tagCornerRadius);
     
-    // Create a gradient in the same color family as the card but darker
+    // Create a gradient in the same color family
     const baseColor = this.darkenColor(this.color, 40);
     const gradient = context.createLinearGradient(tagX, tagY, tagX, tagY + tagHeight);
     gradient.addColorStop(0, baseColor);
@@ -207,33 +249,35 @@ class AffirmationCard {
     
     // Add a subtle border
     context.strokeStyle = this.darkenColor(this.color, 60);
-    context.lineWidth = 1.5;
+    context.lineWidth = Math.max(1, width * 0.005);
     context.stroke();
     context.closePath();
     
     context.restore(); // End shadow effect
     
+    // Calculate flower and text sizes based on tag dimensions
+    const flowerSize = tagHeight * 0.6;
+    const textSize = Math.min(tagHeight * 0.6, tagWidth * 0.15, 16);
+    
+    // Draw flower icon 
+    this.drawPriceFlower(tagX + tagWidth * 0.25, tagY + tagHeight/2, flowerSize);
+    
     // Draw price text
-    context.font = `bold ${Math.min(tagHeight * 0.6, 16)}px Arial`;
+    context.font = `bold ${textSize}px Arial`;
     context.fillStyle = '#FFFFFF';
     context.textAlign = 'center';
     context.textBaseline = 'middle';
-    
-    // Draw custom flower icon
-    this.drawPriceFlower(tagX + tagWidth * 0.25, tagY + tagHeight/2, tagHeight * 0.5);
-    
-    // Draw price with improved spacing
     context.fillText(`${price}`, tagX + tagWidth * 0.55, tagY + tagHeight / 2);
   }
   
   /**
-   * Draw a custom flower icon for the price tag
+   * Draw a flower icon for the price tag
    * @param {number} x - Center X position
    * @param {number} y - Center Y position
    * @param {number} size - Icon size
    */
   drawPriceFlower(x, y, size) {
-    const context = this.context;
+    const { context } = this;
     const petalCount = 5;
     
     // Draw flower petals
@@ -273,66 +317,30 @@ class AffirmationCard {
   }
   
   /**
-   * Select this card
+   * Select this card (for animation/UI)
    */
   select() {
     this.isSelected = true;
-    this.animationProgress = 0;
-    
-    // Start animation
-    this.startAnimation();
   }
   
   /**
-   * Reveal the card message
+   * Reveal the card message (after purchase)
    */
   reveal() {
     this.isRevealed = true;
   }
   
   /**
-   * Start selection animation
-   */
-  startAnimation() {
-    this.animationProgress = 0;
-    this.animate();
-  }
-  
-  /**
-   * Animate the card selection
-   */
-  animate() {
-    if (this.animationProgress < 1) {
-      this.animationProgress += 0.05;
-      
-      if (this.animationProgress >= 1) {
-        this.animationProgress = 1;
-        // We no longer automatically reveal the message after animation completes
-        // The reveal will only happen after purchase
-      } else {
-        // Continue animation
-        requestAnimationFrame(() => this.animate());
-      }
-    }
-  }
-  
-  /**
-   * Set hover state
+   * Set hover state and scale
    * @param {boolean} isHovered - Whether card is being hovered over
    */
   setHovered(isHovered) {
     this.isHovered = isHovered;
-    
-    // Animate hover scale
-    if (isHovered) {
-      this.hoverScale = 1.05; // Scale up by 5%
-    } else {
-      this.hoverScale = 1.0; // Reset scale
-    }
+    this.hoverScale = isHovered ? 1.05 : 1.0;
   }
   
   /**
-   * Move the card to a new position with animation
+   * Set target position for smooth movement
    * @param {number} targetX - Target X position
    * @param {number} targetY - Target Y position
    */
@@ -342,22 +350,30 @@ class AffirmationCard {
   }
   
   /**
-   * Update card position for animation
+   * Update card position with smooth animation
    */
   update() {
-    // Animate position if there's a target
+    // Smooth movement toward target position
     if (this.x !== this.targetX || this.y !== this.targetY) {
-      this.x += (this.targetX - this.x) * 0.2;
-      this.y += (this.targetY - this.y) * 0.2;
+      // Calculate movement speed based on distance
+      const dx = this.targetX - this.x;
+      const dy = this.targetY - this.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
       
-      // Snap to target if close enough
+      // Use proportional speed for smoother animation
+      const speed = Math.max(0.1, Math.min(0.3, distance / 50));
+      
+      this.x += dx * speed;
+      this.y += dy * speed;
+      
+      // Snap to target when very close to avoid tiny movements
       if (Math.abs(this.x - this.targetX) < 0.5) this.x = this.targetX;
       if (Math.abs(this.y - this.targetY) < 0.5) this.y = this.targetY;
     }
   }
   
   /**
-   * Helper method to round rectangle corners
+   * Helper method to draw rounded rectangle corners
    * @param {CanvasRenderingContext2D} ctx - Canvas context
    * @param {number} x - X position
    * @param {number} y - Y position
@@ -366,15 +382,18 @@ class AffirmationCard {
    * @param {number} radius - Corner radius
    */
   roundRect(ctx, x, y, width, height, radius) {
-    ctx.moveTo(x + radius, y);
-    ctx.lineTo(x + width - radius, y);
-    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-    ctx.lineTo(x + width, y + height - radius);
-    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-    ctx.lineTo(x + radius, y + height);
-    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-    ctx.lineTo(x, y + radius);
-    ctx.quadraticCurveTo(x, y, x + radius, y);
+    // Ensure radius isn't too large for the rectangle
+    const safeRadius = Math.min(radius, Math.min(width, height) / 2);
+    
+    ctx.moveTo(x + safeRadius, y);
+    ctx.lineTo(x + width - safeRadius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + safeRadius);
+    ctx.lineTo(x + width, y + height - safeRadius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - safeRadius, y + height);
+    ctx.lineTo(x + safeRadius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - safeRadius);
+    ctx.lineTo(x, y + safeRadius);
+    ctx.quadraticCurveTo(x, y, x + safeRadius, y);
   }
   
   /**
@@ -394,7 +413,7 @@ class AffirmationCard {
     g = Math.max(0, g - percent);
     b = Math.max(0, b - percent);
     
-    // Convert back to hex
+    // Convert back to hex with padding
     return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
   }
   
@@ -415,7 +434,7 @@ class AffirmationCard {
     g = Math.min(255, g + percent);
     b = Math.min(255, b + percent);
     
-    // Convert back to hex
+    // Convert back to hex with padding
     return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
   }
 }

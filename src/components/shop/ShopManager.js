@@ -1,6 +1,6 @@
 /**
  * ShopManager.js - Manages shop functionality and coordinates between components
- * Updated to include trading mechanism for buying cards with flowers
+ * Improved with better resize handling and state management
  */
 import ShopMenu from './ShopMenu.js';
 import GameEvents from '../../events/GameEvents.js';
@@ -16,19 +16,25 @@ class ShopManager {
     this.context = context;
     this.canvas = canvas;
     
-    // Card pricing and purchase tracking
-    this.basePrice = 100; // Initial card price (100 flowers)
+    // Pricing configuration
+    this.basePrice = 100; // Initial card price
     this.currentPrice = this.basePrice;
     this.priceIncreaseMin = 0.4; // 40% minimum increase
     this.priceIncreaseMax = 0.5; // 50% maximum increase
     
-    // Track purchased cards to avoid showing them again
-    this.purchasedCards = [];
+    // Previous canvas dimensions for resize handling
+    this.previousWidth = canvas.width;
+    this.previousHeight = canvas.height;
     
-    // Track if the user has attempted to buy a card they couldn't afford
+    // Purchase state tracking
+    this.purchasedCards = [];
     this.lastAttemptedPurchase = null;
     
-    // All available affirmation messages (original 3 plus 3 new ones)
+    // Resize handling
+    this.resizeDebounceTimer = null;
+    this.resizeDebounceDelay = 100; // ms
+    
+    // Affirmation messages
     this.allAffirmations = [
       "You are strong, beautiful, and capable of achieving anything you set your mind to.",
       "Every day with you is a blessing. Your smile lights up my world.",
@@ -38,8 +44,13 @@ class ShopManager {
       "Your laugh is my favorite sound, and your happiness is my greatest goal."
     ];
     
-    // Create the shop menu with available affirmations
-    this.shopMenu = new ShopMenu(context, canvas, this.getAvailableAffirmations(), this.currentPrice);
+    // Create shop menu
+    this.shopMenu = new ShopMenu(
+      context, 
+      canvas, 
+      this.getAvailableAffirmations(), 
+      this.currentPrice
+    );
     
     // Register event listeners
     this.registerEventListeners();
@@ -52,68 +63,112 @@ class ShopManager {
    * Register event listeners for shop interactions
    */
   registerEventListeners() {
-    // Listen for shop button presses
+    // Shop button events
     GameEvents.on(INPUT_EVENTS.BUTTON_PRESS, (data) => {
       if (data.buttonKey === 'shop') {
         this.openShop();
       }
     });
     
-    // Listen for mouse clicks to handle shop interactions
+    // Mouse events for shop menu interactions
     GameEvents.on(INPUT_EVENTS.MOUSE_DOWN, (data) => {
       if (this.shopMenu.isOpen) {
         this.shopMenu.handleClick(data.x, data.y);
       }
     });
     
-    // Listen for mouse move events to handle hover effects
     GameEvents.on(INPUT_EVENTS.MOUSE_MOVE, (data) => {
       if (this.shopMenu.isOpen) {
         this.shopMenu.handleMouseMove(data.x, data.y);
       }
     });
     
-    // Listen for touch events for mobile
+    // Touch events for mobile support
     GameEvents.on(INPUT_EVENTS.TOUCH_START, (data) => {
       if (this.shopMenu.isOpen) {
         this.shopMenu.handleClick(data.x, data.y);
       }
     });
     
-    // Listen for game resize to update positions
-    GameEvents.on(GAME_EVENTS.RESIZE, () => {
-      if (this.shopMenu) {
-        this.shopMenu.handleResize();
-      }
+    // Game resize handling with debounce
+    GameEvents.on(GAME_EVENTS.RESIZE, (data) => {
+      this.handleResize();
     });
     
-    // Listen for card selection events
+    // Shop-specific events
     GameEvents.on(SHOP_EVENTS.CARD_SELECT, (data) => {
       this.handleCardSelect(data);
     });
     
-    // Listen for card purchase attempts
     GameEvents.on(SHOP_EVENTS.CARD_PURCHASE_ATTEMPT, (data) => {
       this.attemptPurchaseCard(data);
+    });
+    
+    // Listen for shop close events to potentially save state
+    GameEvents.on(SHOP_EVENTS.CLOSE, () => {
+      this.saveState();
     });
   }
   
   /**
-   * Load saved state from localStorage if available
+   * Handle resize events with debouncing to prevent layout thrashing
+   */
+  handleResize() {
+    // Clear any existing timeout
+    if (this.resizeDebounceTimer) {
+      clearTimeout(this.resizeDebounceTimer);
+    }
+    
+    // Set a debounce timer to avoid excessive updates during resize
+    this.resizeDebounceTimer = setTimeout(() => {
+      // Check if dimensions actually changed
+      if (this.canvas.width !== this.previousWidth || 
+          this.canvas.height !== this.previousHeight) {
+        
+        // Store new dimensions
+        this.previousWidth = this.canvas.width;
+        this.previousHeight = this.canvas.height;
+        
+        // Update shop menu layout
+        if (this.shopMenu) {
+          this.shopMenu.handleResize();
+        }
+      }
+      
+      this.resizeDebounceTimer = null;
+    }, this.resizeDebounceDelay);
+  }
+  
+  /**
+   * Load saved state from localStorage
    */
   loadSavedState() {
     try {
       const savedState = localStorage.getItem('shopState');
       if (savedState) {
         const state = JSON.parse(savedState);
-        if (state.currentPrice) this.currentPrice = state.currentPrice;
-        if (state.purchasedCards) this.purchasedCards = state.purchasedCards;
+        
+        // Restore saved price with validation
+        if (state.currentPrice && typeof state.currentPrice === 'number' && state.currentPrice >= this.basePrice) {
+          this.currentPrice = state.currentPrice;
+        }
+        
+        // Restore purchased cards with validation
+        if (state.purchasedCards && Array.isArray(state.purchasedCards)) {
+          // Validate each card is a string that exists in allAffirmations
+          this.purchasedCards = state.purchasedCards.filter(
+            card => typeof card === 'string' && this.allAffirmations.includes(card)
+          );
+        }
         
         // Update the shop menu with current price and available cards
         this.shopMenu.updateCards(this.getAvailableAffirmations(), this.currentPrice);
       }
     } catch (e) {
       console.error('Error loading saved shop state:', e);
+      // Reset to defaults on error
+      this.currentPrice = this.basePrice;
+      this.purchasedCards = [];
     }
   }
   
@@ -137,6 +192,11 @@ class ShopManager {
    * @returns {string[]} Array of available affirmation messages
    */
   getAvailableAffirmations() {
+    // If all cards have been purchased, make them all available again
+    if (this.purchasedCards.length >= this.allAffirmations.length) {
+      return [...this.allAffirmations]; // Return a copy of all affirmations
+    }
+    
     // Filter out purchased messages
     return this.allAffirmations.filter(message => !this.purchasedCards.includes(message));
   }
@@ -145,16 +205,25 @@ class ShopManager {
    * Open the shop menu
    */
   openShop() {
-    // Update the shop menu with current price and available cards
-    this.shopMenu.updateCards(this.getAvailableAffirmations(), this.currentPrice);
-    this.shopMenu.open();
+    // Ensure we have the latest available cards
+    const availableAffirmations = this.getAvailableAffirmations();
+    
+    // Only update if shop menu exists
+    if (this.shopMenu) {
+      // Update the shop menu with current price and available cards
+      this.shopMenu.updateCards(availableAffirmations, this.currentPrice);
+      this.shopMenu.open();
+    }
   }
   
   /**
    * Close the shop menu
    */
   closeShop() {
-    this.shopMenu.close();
+    if (this.shopMenu) {
+      this.shopMenu.close();
+      this.saveState(); // Save state when closing
+    }
   }
   
   /**
@@ -163,7 +232,9 @@ class ShopManager {
    */
   handleCardSelect(data) {
     // When a card is selected, show the purchase option
-    this.shopMenu.showPurchaseOption(data.cardIndex, this.currentPrice);
+    if (this.shopMenu) {
+      this.shopMenu.showPurchaseOption(data.cardIndex, this.currentPrice);
+    }
   }
   
   /**
@@ -175,11 +246,12 @@ class ShopManager {
     this.lastAttemptedPurchase = data.cardIndex;
     
     // Get current flower count
-    let flowerCount = 0;
-    const collectibleManager = window.game ? window.game.collectibleManager : null;
+    let flowerCount = this.getPlayerFlowerCount();
     
-    if (collectibleManager) {
-      flowerCount = collectibleManager.getCollectedCount();
+    // Check if the card index is valid
+    if (data.cardIndex < 0 || data.cardIndex >= this.shopMenu.cards.length) {
+      console.error("Invalid card index in purchase attempt");
+      return;
     }
     
     // Get the card that was selected
@@ -187,82 +259,138 @@ class ShopManager {
     
     // Check if user has enough flowers
     if (flowerCount >= this.currentPrice) {
-      // User can afford the card
-      
-      // Subtract flowers
-      if (collectibleManager) {
-        // Create a temporary backup of the current count
-        const previousCount = collectibleManager.collected;
-        
-        // Subtract the price from the collected count
-        collectibleManager.collected -= this.currentPrice;
-        
-        // Emit count update event
-        collectibleManager.emitCountUpdate();
-        
-        // Log the transaction
-        console.log(`Purchased card for ${this.currentPrice} flowers. New balance: ${collectibleManager.collected}`);
-      }
-      
-      // Mark card as purchased and reveal the message
-      if (selectedCard && selectedCard.message) {
-        this.purchasedCards.push(selectedCard.message);
-        
-        // Now reveal the message in the card since it's purchased
-        selectedCard.reveal();
-      }
-      
-      // Calculate the next price (40-50% increase)
-      const increaseRate = this.priceIncreaseMin + 
-        Math.random() * (this.priceIncreaseMax - this.priceIncreaseMin);
-      
-      const newPrice = Math.ceil(this.currentPrice * (1 + increaseRate));
-      this.currentPrice = newPrice;
-      
-      // Save state
-      this.saveState();
-      
-      // Notify the shop menu that purchase was successful
-      this.shopMenu.handlePurchaseSuccess(data.cardIndex, this.currentPrice);
-      
-      // Emit purchase success event
-      GameEvents.emit(SHOP_EVENTS.CARD_PURCHASE_SUCCESS, {
-        cardIndex: data.cardIndex,
-        price: this.currentPrice,
-        message: selectedCard ? selectedCard.message : null
-      });
+      // Process successful purchase
+      this.processPurchase(selectedCard);
     } else {
-      // User cannot afford the card
-      this.shopMenu.handlePurchaseFailure(data.cardIndex, flowerCount, this.currentPrice);
-      
-      // Emit purchase failure event
-      GameEvents.emit(SHOP_EVENTS.CARD_PURCHASE_FAILURE, {
-        cardIndex: data.cardIndex,
-        price: this.currentPrice,
-        balance: flowerCount
-      });
+      // Handle insufficient funds
+      this.handleInsufficientFunds(flowerCount);
     }
+  }
+  
+  /**
+   * Get the player's current flower count
+   * @returns {number} Current flower count
+   */
+  getPlayerFlowerCount() {
+    let flowerCount = 0;
+    const collectibleManager = window.game ? window.game.collectibleManager : null;
+    
+    if (collectibleManager) {
+      flowerCount = collectibleManager.getCollectedCount();
+    }
+    
+    return flowerCount;
+  }
+  
+  /**
+   * Process a successful card purchase
+   * @param {AffirmationCard} selectedCard - The card being purchased
+   */
+  processPurchase(selectedCard) {
+    // Subtract flowers from player's balance
+    const collectibleManager = window.game ? window.game.collectibleManager : null;
+    
+    if (collectibleManager) {
+      // Subtract the price from the collected count
+      collectibleManager.collected -= this.currentPrice;
+      
+      // Emit count update event
+      collectibleManager.emitCountUpdate();
+    }
+    
+    // Mark card as purchased and reveal the message
+    if (selectedCard && selectedCard.message) {
+      // Avoid duplicate entries
+      if (!this.purchasedCards.includes(selectedCard.message)) {
+        this.purchasedCards.push(selectedCard.message);
+      }
+      
+      // Reveal the card
+      selectedCard.reveal();
+    }
+    
+    // Calculate the next price with random increase
+    const increaseRate = this.priceIncreaseMin + 
+                         Math.random() * (this.priceIncreaseMax - this.priceIncreaseMin);
+    this.currentPrice = Math.ceil(this.currentPrice * (1 + increaseRate));
+    
+    // Save state
+    this.saveState();
+    
+    // Notify the shop menu that purchase was successful
+    if (this.shopMenu) {
+      this.shopMenu.handlePurchaseSuccess(this.lastAttemptedPurchase, this.currentPrice);
+    }
+    
+    // Emit purchase success event
+    GameEvents.emit(SHOP_EVENTS.CARD_PURCHASE_SUCCESS, {
+      cardIndex: this.lastAttemptedPurchase,
+      price: this.currentPrice,
+      message: selectedCard ? selectedCard.message : null
+    });
+  }
+  
+  /**
+   * Handle case where player has insufficient funds
+   * @param {number} flowerCount - Current flower balance
+   */
+  handleInsufficientFunds(flowerCount) {
+    // Notify the shop menu that purchase failed
+    if (this.shopMenu) {
+      this.shopMenu.handlePurchaseFailure(
+        this.lastAttemptedPurchase, 
+        flowerCount, 
+        this.currentPrice
+      );
+    }
+    
+    // Emit purchase failure event
+    GameEvents.emit(SHOP_EVENTS.CARD_PURCHASE_FAILURE, {
+      cardIndex: this.lastAttemptedPurchase,
+      price: this.currentPrice,
+      balance: flowerCount
+    });
   }
   
   /**
    * Update the shop components
    */
   update() {
-    this.shopMenu.update();
+    // Check for canvas size changes
+    if (this.canvas.width !== this.previousWidth || 
+        this.canvas.height !== this.previousHeight) {
+      this.handleResize();
+    }
+    
+    // Update shop menu state
+    if (this.shopMenu) {
+      this.shopMenu.update();
+    }
   }
   
   /**
    * Draw the shop components
    */
   draw() {
-    this.shopMenu.draw();
+    if (this.shopMenu) {
+      this.shopMenu.draw();
+    }
   }
   
   /**
-   * Clean up event listeners when the system is destroyed
+   * Clean up event listeners and resources
    */
   cleanup() {
-    // In a real implementation, you would keep track of listeners and remove them specifically
+    // Clear any pending resize debounce timer
+    if (this.resizeDebounceTimer) {
+      clearTimeout(this.resizeDebounceTimer);
+      this.resizeDebounceTimer = null;
+    }
+    
+    // Save state before cleanup
+    this.saveState();
+    
+    // This method could be expanded to remove specific event listeners in a full implementation
   }
 }
 
