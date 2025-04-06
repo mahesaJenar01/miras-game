@@ -2,7 +2,7 @@
  * ShopPurchaseButton.js - Manages the purchase button in the shop
  * Handles button states, animations and interactions
  */
-import ShopUiRenderer from './ShopUiRenderer.js';
+import ShopUiRenderer from '../utils/ShopUiRenderer.js';
 
 class ShopPurchaseButton {
   /**

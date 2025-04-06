@@ -2,8 +2,8 @@
  * ShopCardDisplay.js - Manages the card collection in the shop
  * Handles card creation, selection, positioning and animation
  */
-import AffirmationCard from './AffirmationCard.js';
-import ShopUiRenderer from './ShopUiRenderer.js';
+import AffirmationCard from '../models/AffirmationCard.js';
+import ShopUiRenderer from '../utils/ShopUiRenderer.js';
 
 class ShopCardDisplay {
   /**

@@ -2,7 +2,7 @@
  * ShopCloseButton.js - Manages the close button in the shop
  * Handles drawing and interaction for the shop close button
  */
-import ShopUiRenderer from './ShopUiRenderer.js';
+import ShopUiRenderer from '../utils/ShopUiRenderer.js';
 
 class ShopCloseButton {
   /**

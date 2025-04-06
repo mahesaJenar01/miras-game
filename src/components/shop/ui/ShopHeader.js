@@ -2,7 +2,7 @@
  * ShopHeader.js - Manages the title and subtitle elements in the shop
  * Handles different text states based on shop flow
  */
-import ShopUiRenderer from './ShopUiRenderer.js';
+import ShopUiRenderer from '../utils/ShopUiRenderer.js';
 
 class ShopHeader {
   /**

@@ -2,7 +2,7 @@
  * ShopManager.js - Manages shop functionality and coordinates between components
  * Improved with better resize handling and state management
  */
-import ShopMenu from './ShopMenu.js';
+import ShopMenu from './core/ShopMenu.js';
 import GameEvents from '../../events/GameEvents.js';
 import { SHOP_EVENTS, INPUT_EVENTS, GAME_EVENTS, COLLECTIBLE_EVENTS } from '../../events/EventTypes.js';
 

@@ -2,14 +2,12 @@
  * ShopMenu.js - Core coordinator for the shop interface
  * Delegates specific responsibilities to specialized components
  */
-import ShopCardDisplay from './ShopCardDisplay.js';
-import ShopHeader from './ShopHeader.js';
-import ShopPurchaseButton from './ShopPurchaseButton.js';
-import ShopCloseButton from './ShopCloseButton.js';
-import ShopLayoutManager from './ShopLayoutManager.js';
-import ShopAnimator from './ShopAnimator.js';
-import GameEvents from '../../events/GameEvents.js';
-import { SHOP_EVENTS } from '../../events/EventTypes.js';
+import ShopCardDisplay from '../ui/ShopCardDisplay.js';
+import ShopHeader from '../ui/ShopHeader.js';
+import ShopPurchaseButton from '../ui/ShopPurchaseButton.js';
+import ShopCloseButton from '../ui/ShopCloseButton.js';
+import ShopLayoutManager from '../utils/ShopLayoutManager.js';
+import ShopAnimator from '../utils/ShopAnimator.js';
 
 class ShopMenu {
   /**
