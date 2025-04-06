@@ -302,6 +302,9 @@ class ShopManager {
       // Subtract the price from the collected count
       collectibleManager.collected -= this.currentPrice;
       
+      // Save the updated flower count to localStorage
+      collectibleManager.saveFlowersCount();
+      
       // Emit count update event
       collectibleManager.emitCountUpdate();
     }
@@ -319,7 +322,7 @@ class ShopManager {
     
     // Calculate the next price with random increase
     const increaseRate = this.priceIncreaseMin + 
-                         Math.random() * (this.priceIncreaseMax - this.priceIncreaseMin);
+                          Math.random() * (this.priceIncreaseMax - this.priceIncreaseMin);
     this.currentPrice = Math.ceil(this.currentPrice * (1 + increaseRate));
     
     // Save state

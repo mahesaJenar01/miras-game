@@ -2,6 +2,7 @@
  * CollectibleManager.js - Manages all collectible items in the game
  * Handles spawning, updating, collision detection, and collection
  * Updated to use tulip flowers instead of coins/stars/gems
+ * Added localStorage support to persist collected flowers
  */
 import Collectible from './Collectible.js';
 import GameEvents from '../../events/GameEvents.js';
@@ -33,6 +34,9 @@ class CollectibleManager {
     
     // Register event listeners
     this.registerEventListeners();
+    
+    // Load previously saved flowers count from localStorage
+    this.loadSavedFlowers();
   }
   
   /**
@@ -78,6 +82,46 @@ class CollectibleManager {
     
     // Emit initial count event
     this.emitCountUpdate();
+  }
+  
+  /**
+   * Load previously saved flowers count from localStorage
+   */
+  loadSavedFlowers() {
+    try {
+      // Try to get the saved flower count from localStorage
+      const savedFlowers = localStorage.getItem('mirasGame_flowerCount');
+      
+      if (savedFlowers !== null) {
+        // Parse the saved count as a number
+        const count = parseInt(savedFlowers, 10);
+        
+        // Validate the count is a positive number
+        if (!isNaN(count) && count >= 0) {
+          this.collected = count;
+          console.log(`Loaded ${count} flowers from localStorage`);
+        }
+      }
+    } catch (e) {
+      // Log any errors but continue with default count (0)
+      console.error('Error loading saved flower count:', e);
+    }
+    
+    // Emit count update with the loaded value
+    this.emitCountUpdate();
+  }
+  
+  /**
+   * Save the current flowers count to localStorage
+   */
+  saveFlowersCount() {
+    try {
+      // Save the current count to localStorage
+      localStorage.setItem('mirasGame_flowerCount', this.collected.toString());
+    } catch (e) {
+      // Log any errors but continue
+      console.error('Error saving flower count:', e);
+    }
   }
   
   /**
@@ -203,6 +247,9 @@ class CollectibleManager {
     // Increment collected count by value
     this.collected += collectible.value;
     
+    // Save the updated count to localStorage
+    this.saveFlowersCount();
+    
     // Emit collect event
     GameEvents.emitCollectible(COLLECTIBLE_EVENTS.COLLECT, {
       type: collectible.type,
@@ -293,12 +340,21 @@ class CollectibleManager {
   
   /**
    * Reset the manager (clear collectibles and reset count)
+   * This method now has an optional parameter to preserve the collected count
+   * @param {boolean} preserveCount - Whether to preserve the collected count
    */
-  reset() {
+  reset(preserveCount = true) {
     this.collectibles = [];
-    this.collected = 0;
     this.spawnTimer = 0;
     this.spawnInterval = 120;
+    
+    if (!preserveCount) {
+      // Only reset the count if preserveCount is false
+      this.collected = 0;
+      // Also update the saved value in localStorage
+      this.saveFlowersCount();
+    }
+    
     this.emitCountUpdate();
   }
 }
