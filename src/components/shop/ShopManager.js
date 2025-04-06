@@ -1,6 +1,6 @@
 /**
  * ShopManager.js - Manages shop functionality and coordinates between components
- * Improved with better resize handling and state management
+ * Fixed version with proper card access and error handling
  */
 import ShopMenu from './core/ShopMenu.js';
 import GameEvents from '../../events/GameEvents.js';
@@ -248,14 +248,22 @@ class ShopManager {
     // Get current flower count
     let flowerCount = this.getPlayerFlowerCount();
     
+    // Check if shop menu and card display exist
+    if (!this.shopMenu || !this.shopMenu.cardDisplay) {
+      console.error("Shop menu or card display not initialized");
+      return;
+    }
+    
     // Check if the card index is valid
-    if (data.cardIndex < 0 || data.cardIndex >= this.shopMenu.cards.length) {
+    if (!this.shopMenu.cardDisplay.cards || 
+        data.cardIndex < 0 || 
+        data.cardIndex >= this.shopMenu.cardDisplay.cards.length) {
       console.error("Invalid card index in purchase attempt");
       return;
     }
     
     // Get the card that was selected
-    const selectedCard = this.shopMenu.cards[data.cardIndex];
+    const selectedCard = this.shopMenu.cardDisplay.cards[data.cardIndex];
     
     // Check if user has enough flowers
     if (flowerCount >= this.currentPrice) {
@@ -305,8 +313,8 @@ class ShopManager {
         this.purchasedCards.push(selectedCard.message);
       }
       
-      // Reveal the card
-      selectedCard.reveal();
+      // Reveal the card using the proper method
+      this.shopMenu.cardDisplay.revealCard(this.lastAttemptedPurchase);
     }
     
     // Calculate the next price with random increase
