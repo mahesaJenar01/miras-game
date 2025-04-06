@@ -8,6 +8,8 @@ import ShopPurchaseButton from '../ui/ShopPurchaseButton.js';
 import ShopCloseButton from '../ui/ShopCloseButton.js';
 import ShopLayoutManager from '../utils/ShopLayoutManager.js';
 import ShopAnimator from '../utils/ShopAnimator.js';
+import { SHOP_EVENTS } from '../../../events/EventTypes.js';
+import GameEvents from '../../../events/GameEvents.js'
 
 class ShopMenu {
   /**
