@@ -1,6 +1,6 @@
 /**
  * ShopCardDisplay.js - Manages the card collection in the shop
- * Handles card creation, selection, positioning and animation
+ * Improved with empty state handling and card management
  */
 import AffirmationCard from '../models/AffirmationCard.js';
 import ShopUiRenderer from '../utils/ShopUiRenderer.js';
@@ -25,6 +25,9 @@ class ShopCardDisplay {
     
     // UI utilities
     this.renderer = new ShopUiRenderer(context);
+    
+    // Empty state flag
+    this.isEmpty = false;
   }
   
   /**
@@ -37,6 +40,14 @@ class ShopCardDisplay {
     this.cards = [];
     this.selectedCard = null;
     this.selectedCardIndex = -1;
+    
+    // Check if we have any messages
+    if (!messages || messages.length === 0) {
+      this.isEmpty = true;
+      return;
+    }
+    
+    this.isEmpty = false;
     
     // Get up to 3 random messages
     const displayCount = Math.min(messages.length, 3);
@@ -65,17 +76,31 @@ class ShopCardDisplay {
   }
   
   /**
+   * Clear all cards (for empty state)
+   */
+  clearCards() {
+    this.cards = [];
+    this.selectedCard = null;
+    this.selectedCardIndex = -1;
+    this.isEmpty = true;
+  }
+  
+  /**
    * Update card positions based on layout manager
    */
   updateCardPositions() {
+    if (this.isEmpty || this.cards.length === 0) return;
+    
     const positions = this.layoutManager.getCardPositions(this.cards.length);
     
     // Apply positions to cards
     this.cards.forEach((card, index) => {
-      card.x = positions[index].x;
-      card.y = positions[index].y;
-      card.targetX = positions[index].x;
-      card.targetY = positions[index].y;
+      if (index < positions.length) {
+        card.x = positions[index].x;
+        card.y = positions[index].y;
+        card.targetX = positions[index].x;
+        card.targetY = positions[index].y;
+      }
     });
   }
   
@@ -106,6 +131,11 @@ class ShopCardDisplay {
    * @returns {Object} Result object with action and optional card info
    */
   handleClick(x, y) {
+    // If no cards or empty state, return none action
+    if (this.isEmpty || this.cards.length === 0) {
+      return { action: 'none' };
+    }
+    
     // If a card is already selected
     if (this.selectedCard) {
       // Check if click is on the selected card
@@ -152,8 +182,8 @@ class ShopCardDisplay {
    * @param {number} y - Mouse Y position
    */
   handleMouseMove(x, y) {
-    // Skip hover effects if a card is selected
-    if (this.selectedCard) return;
+    // Skip if empty or has selection
+    if (this.isEmpty || this.selectedCard) return;
     
     // Update hover states for all cards
     this.cards.forEach(card => {
@@ -218,6 +248,31 @@ class ShopCardDisplay {
   }
   
   /**
+   * Remove a card (after it's been purchased)
+   * @param {number} index - Index of the card to remove
+   */
+  removeCard(index) {
+    if (index >= 0 && index < this.cards.length) {
+      // Remove the card
+      this.cards.splice(index, 1);
+      
+      // Clear selection if the removed card was selected
+      if (index === this.selectedCardIndex) {
+        this.selectedCard = null;
+        this.selectedCardIndex = -1;
+      }
+      
+      // Update card positions
+      this.updateCardPositions();
+      
+      // Set empty state if no more cards
+      if (this.cards.length === 0) {
+        this.isEmpty = true;
+      }
+    }
+  }
+  
+  /**
    * Get information about the currently selected card
    * @returns {Object|null} Selected card info or null if none selected
    */
@@ -235,6 +290,8 @@ class ShopCardDisplay {
    * Handle resize events
    */
   handleResize() {
+    if (this.isEmpty) return;
+    
     // Update card dimensions
     const cardDimensions = this.layoutManager.getCardDimensions();
     this.cards.forEach(card => {
@@ -256,6 +313,8 @@ class ShopCardDisplay {
    * Update all cards (animations, etc.)
    */
   update() {
+    if (this.isEmpty) return;
+    
     // Update all cards
     this.cards.forEach(card => card.update());
   }
@@ -265,6 +324,12 @@ class ShopCardDisplay {
    * @param {number} animProgress - Animation progress (0-1)
    */
   draw(animProgress) {
+    if (this.isEmpty) {
+      // Draw empty state message
+      this.drawEmptyState();
+      return;
+    }
+    
     if (this.selectedCard) {
       // When a card is selected, only draw that one
       this.selectedCard.draw();
@@ -290,6 +355,27 @@ class ShopCardDisplay {
         }
       });
     }
+  }
+  
+  /**
+   * Draw empty state message when no cards are available
+   */
+  drawEmptyState() {
+    const { context } = this;
+    const { canvasWidth, canvasHeight } = this.layoutManager.getCanvasDimensions();
+    
+    // Get center of canvas
+    const centerX = canvasWidth / 2;
+    const centerY = canvasHeight / 2;
+    
+    // Draw empty state message
+    context.font = "bold 20px Arial";
+    context.fillStyle = "#FFFFFF";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText("All affirmation cards have been collected!", centerX, centerY - 20);
+    context.font = "16px Arial";
+    context.fillText("Come back later for more cards.", centerX, centerY + 20);
   }
 }
 

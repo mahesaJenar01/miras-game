@@ -1,6 +1,6 @@
 /**
  * ButtonRenderer - Handles rendering of all buttons
- * Keeps drawing logic separated from button behavior
+ * Enhanced with support for disabled button states
  */
 export default class ButtonRenderer {
   /**
@@ -28,15 +28,28 @@ export default class ButtonRenderer {
    */
   drawButton(button) {
     const { context } = this;
-    const { x, y, width, height, cornerRadius, isHovered, isPressed } = button;
+    const { x, y, width, height, cornerRadius, isHovered, isPressed, isDisabled } = button;
     
     // Determine current color based on state
-    let currentColor = button.color;
-    if (isPressed) {
-      // Darker when pressed
-      currentColor = this.darkenColor(button.color, 30);
-    } else if (isHovered) {
-      currentColor = button.hoverColor;
+    let currentColor;
+    
+    if (button.getCurrentColor) {
+      // Use button's custom getCurrentColor method if available (for disabled state)
+      currentColor = button.getCurrentColor();
+    } else {
+      // Fallback to standard color logic
+      currentColor = button.color;
+      if (isPressed) {
+        // Darker when pressed
+        currentColor = this.darkenColor(button.color, 30);
+      } else if (isHovered) {
+        currentColor = button.hoverColor;
+      }
+      
+      // Apply disabled state if button is disabled
+      if (isDisabled) {
+        currentColor = "#A0A0A0"; // Gray for disabled state
+      }
     }
     
     // Create gradient
@@ -65,54 +78,66 @@ export default class ButtonRenderer {
     
     // Draw decorations
     if (button.decorations) {
+      // Get appropriate decoration color (might be different for disabled state)
+      const decorationColor = isDisabled ? "#777777" : undefined;
+      
       button.decorations.forEach(decoration => {
         if (decoration.type === 'flower') {
           this.drawFlower(
             x + decoration.x, 
             y + decoration.y,
             decoration.size,
-            decoration.color
+            decorationColor || decoration.color
           );
         } else if (decoration.type === 'arrow') {
           this.drawArrow(
             x + decoration.x,
             y + decoration.y,
             button.height * 0.25,
-            button.textColor
+            decorationColor || button.textColor
           );
         } else if (decoration.type === 'upArrow') {
           this.drawUpArrow(
             x + decoration.x,
             y + decoration.y,
             button.height * 0.25,
-            button.textColor
+            decorationColor || button.textColor
           );
         } else if (decoration.type === 'star') {
           this.drawStar(
             x + decoration.x,
             y + decoration.y,
-            decoration.size
+            decoration.size,
+            decorationColor || "#FF10F0"
           );
         } else if (decoration.type === 'heart') {
           this.drawHeart(
             x + decoration.x,
             y + decoration.y,
             decoration.size,
-            button.textColor
+            decorationColor || button.textColor
           );
         }
       });
     }
     
     // Draw button text
+    let textColor;
+    if (button.getCurrentTextColor) {
+      // Use button's custom text color getter if available
+      textColor = button.getCurrentTextColor();
+    } else {
+      textColor = isDisabled ? "#666666" : button.textColor;
+    }
+    
     context.font = button.font;
-    context.fillStyle = button.textColor;
+    context.fillStyle = textColor;
     context.textAlign = 'center';
     context.textBaseline = 'middle';
     context.fillText(button.text, x + width / 2, y + height / 2);
     
-    // Add glow effect when hovered
-    if (isHovered && !isPressed) {
+    // Add glow effect when hovered (but not for disabled buttons)
+    if (isHovered && !isPressed && !isDisabled) {
       const scale = 1.03;
       const glowX = x - (width * (scale - 1) / 2);
       const glowY = y - (height * (scale - 1) / 2);
@@ -159,6 +184,15 @@ export default class ButtonRenderer {
       context.strokeStyle = "rgba(255, 16, 240, 0.5)"; // Semi-transparent pink
       context.lineWidth = 2;
       context.stroke();
+      context.closePath();
+    }
+    
+    // Draw disabled overlay if the button is disabled
+    if (isDisabled) {
+      context.beginPath();
+      this.roundRect(context, x, y, width, height, cornerRadius);
+      context.fillStyle = "rgba(0, 0, 0, 0.1)";
+      context.fill();
       context.closePath();
     }
   }
@@ -238,8 +272,9 @@ export default class ButtonRenderer {
    * @param {number} x - X coordinate
    * @param {number} y - Y coordinate
    * @param {number} size - Size of the star
+   * @param {string} color - Color of the star
    */
-  drawStar(x, y, size) {
+  drawStar(x, y, size, color) {
     const context = this.context;
     const points = 5;
     const outerRadius = size;
@@ -260,7 +295,7 @@ export default class ButtonRenderer {
     }
     context.closePath();
     
-    context.fillStyle = "#FF10F0"; // Match the sword color
+    context.fillStyle = color; // Use provided color
     context.fill();
   }
   

@@ -1,6 +1,6 @@
 /**
  * ShopMenu.js - Core coordinator for the shop interface
- * Delegates specific responsibilities to specialized components
+ * Improved version with card refreshing and empty state handling
  */
 import ShopCardDisplay from '../ui/ShopCardDisplay.js';
 import ShopHeader from '../ui/ShopHeader.js';
@@ -52,6 +52,13 @@ class ShopMenu {
   updateCards(messages, currentPrice) {
     this.currentPrice = currentPrice;
     
+    // Check if we have any messages available
+    if (!messages || messages.length === 0) {
+      // If no messages, show empty state
+      this.showEmptyState();
+      return;
+    }
+    
     // Initialize card display with messages
     this.cardDisplay.setCards(messages, currentPrice);
     
@@ -64,6 +71,21 @@ class ShopMenu {
     
     // Update layout
     this.layoutManager.updateLayout();
+  }
+  
+  /**
+   * Show empty state when no cards are available
+   */
+  showEmptyState() {
+    // Clear cards
+    this.cardDisplay.clearCards();
+    
+    // Update header to show empty state
+    this.header.setState('empty');
+    
+    // Hide purchase UI
+    this.showingPurchaseUI = false;
+    this.purchaseButton.hide();
   }
   
   /**
@@ -239,6 +261,9 @@ class ShopMenu {
     // Show success animation on purchase button
     this.purchaseButton.setState('success');
     
+    // Update header message
+    this.header.setState('purchase_success');
+    
     // Hide purchase UI after a delay
     setTimeout(() => {
       this.purchaseButton.setState('normal');
@@ -255,6 +280,9 @@ class ShopMenu {
   handlePurchaseFailure(cardIndex, balance, price) {
     // Show failure animation on purchase button
     this.purchaseButton.setState('failure');
+    
+    // Update header to show failure message
+    this.header.setState('purchase_failure');
     
     // Reset button state after animation
     setTimeout(() => {

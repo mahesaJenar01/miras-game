@@ -1,6 +1,6 @@
 /**
  * ShopHeader.js - Manages the title and subtitle elements in the shop
- * Handles different text states based on shop flow
+ * Enhanced with improved state handling for empty card state
  */
 import ShopUiRenderer from '../utils/ShopUiRenderer.js';
 
@@ -16,7 +16,7 @@ class ShopHeader {
     this.price = 100; // Default price
     
     // Current display state
-    this.state = 'selection_prompt'; // 'selection_prompt', 'purchase_prompt', etc.
+    this.state = 'selection_prompt'; // 'selection_prompt', 'purchase_prompt', 'empty', etc.
     
     // UI utilities
     this.renderer = new ShopUiRenderer(context);
@@ -36,7 +36,7 @@ class ShopHeader {
   
   /**
    * Set the header display state
-   * @param {string} state - New header state ('selection_prompt', 'purchase_prompt', etc.)
+   * @param {string} state - New header state ('selection_prompt', 'purchase_prompt', 'empty', etc.)
    */
   setState(state) {
     this.state = state;
@@ -87,6 +87,9 @@ class ShopHeader {
       // Split subtitle into two lines on narrow screens
       context.fillText('Select a card', canvasWidth/2, subtitleY);
       context.fillText(`(Cost: ${this.price} flowers)`, canvasWidth/2, subtitleY + this.subtitleFontSize * 1.2);
+    } else if (this.state === 'empty') {
+      // Empty state message
+      context.fillText('All cards have been collected!', canvasWidth/2, subtitleY);
     } else {
       // Single line for wider screens or other states
       context.fillText(subtitleText, canvasWidth/2, subtitleY);
@@ -116,6 +119,9 @@ class ShopHeader {
         
       case 'viewing_card':
         return `Choose another card or close to continue`;
+        
+      case 'empty':
+        return `You've collected all affirmation cards!`;
         
       default:
         return `Select a card to reveal a special message`;

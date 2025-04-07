@@ -1,10 +1,10 @@
 /**
  * ShopManager.js - Manages shop functionality and coordinates between components
- * Fixed version with proper card access and error handling
+ * Fixed version with proper card handling and button disabling
  */
 import ShopMenu from './core/ShopMenu.js';
 import GameEvents from '../../events/GameEvents.js';
-import { SHOP_EVENTS, INPUT_EVENTS, GAME_EVENTS, COLLECTIBLE_EVENTS } from '../../events/EventTypes.js';
+import { SHOP_EVENTS, INPUT_EVENTS, GAME_EVENTS, COLLECTIBLE_EVENTS, UI_EVENTS } from '../../events/EventTypes.js';
 
 class ShopManager {
   /**
@@ -57,6 +57,9 @@ class ShopManager {
     
     // Load saved state if available
     this.loadSavedState();
+
+    // Initialize shop button state
+    this.updateShopButtonState();
   }
   
   /**
@@ -108,6 +111,34 @@ class ShopManager {
     GameEvents.on(SHOP_EVENTS.CLOSE, () => {
       this.saveState();
     });
+
+    // Check shop button state periodically
+    setInterval(() => {
+      this.updateShopButtonState();
+    }, 2000); // Check every 2 seconds
+  }
+  
+  /**
+   * Update the shop button's enabled/disabled state
+   */
+  updateShopButtonState() {
+    const hasAvailableCards = this.getAvailableAffirmations().length > 0;
+    
+    // Find the shop button in the game
+    const shopButton = window.game && window.game.buttonSystem ? 
+                       window.game.buttonSystem.buttons.shop : null;
+    
+    if (shopButton) {
+      // Set disabled state on the button
+      shopButton.isDisabled = !hasAvailableCards;
+      
+      // Emit UI update event for the button state
+      GameEvents.emitUI(UI_EVENTS.BUTTON_STATE_CHANGE, {
+        buttonKey: 'shop',
+        isDisabled: !hasAvailableCards,
+        reason: !hasAvailableCards ? 'no_cards_available' : null
+      });
+    }
   }
   
   /**
@@ -163,6 +194,9 @@ class ShopManager {
         
         // Update the shop menu with current price and available cards
         this.shopMenu.updateCards(this.getAvailableAffirmations(), this.currentPrice);
+        
+        // Update shop button state
+        this.updateShopButtonState();
       }
     } catch (e) {
       console.error('Error loading saved shop state:', e);
@@ -182,6 +216,9 @@ class ShopManager {
         purchasedCards: this.purchasedCards
       };
       localStorage.setItem('shopState', JSON.stringify(state));
+      
+      // Update shop button state when state is saved
+      this.updateShopButtonState();
     } catch (e) {
       console.error('Error saving shop state:', e);
     }
@@ -192,12 +229,7 @@ class ShopManager {
    * @returns {string[]} Array of available affirmation messages
    */
   getAvailableAffirmations() {
-    // If all cards have been purchased, make them all available again
-    if (this.purchasedCards.length >= this.allAffirmations.length) {
-      return [...this.allAffirmations]; // Return a copy of all affirmations
-    }
-    
-    // Filter out purchased messages
+    // Filter out purchased messages - never return all cards again
     return this.allAffirmations.filter(message => !this.purchasedCards.includes(message));
   }
   
@@ -208,11 +240,17 @@ class ShopManager {
     // Ensure we have the latest available cards
     const availableAffirmations = this.getAvailableAffirmations();
     
-    // Only update if shop menu exists
-    if (this.shopMenu) {
+    // Only open if there are available cards
+    if (availableAffirmations.length > 0 && this.shopMenu) {
       // Update the shop menu with current price and available cards
       this.shopMenu.updateCards(availableAffirmations, this.currentPrice);
       this.shopMenu.open();
+    } else {
+      // If no cards are available, emit notification event
+      GameEvents.emitUI(UI_EVENTS.UPDATE, {
+        type: 'notification',
+        message: 'No more affirmation cards available!'
+      });
     }
   }
   
@@ -322,7 +360,7 @@ class ShopManager {
     
     // Calculate the next price with random increase
     const increaseRate = this.priceIncreaseMin + 
-                          Math.random() * (this.priceIncreaseMax - this.priceIncreaseMin);
+                         Math.random() * (this.priceIncreaseMax - this.priceIncreaseMin);
     this.currentPrice = Math.ceil(this.currentPrice * (1 + increaseRate));
     
     // Save state
@@ -331,6 +369,22 @@ class ShopManager {
     // Notify the shop menu that purchase was successful
     if (this.shopMenu) {
       this.shopMenu.handlePurchaseSuccess(this.lastAttemptedPurchase, this.currentPrice);
+      
+      // After a short delay, update the shop to show remaining cards
+      setTimeout(() => {
+        const availableAffirmations = this.getAvailableAffirmations();
+        
+        // If there are still cards available, refresh the shop
+        if (availableAffirmations.length > 0) {
+          this.shopMenu.updateCards(availableAffirmations, this.currentPrice);
+        } else {
+          // If no cards left, close the shop
+          this.shopMenu.close();
+        }
+        
+        // Update shop button state based on available cards
+        this.updateShopButtonState();
+      }, 2000); // Wait 2 seconds after purchase to refresh cards
     }
     
     // Emit purchase success event
