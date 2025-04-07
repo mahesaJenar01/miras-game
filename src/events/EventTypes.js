@@ -1,7 +1,7 @@
 /**
  * EventTypes.js - Constants for all event types
  * Categorized by domain to ensure consistency and prevent typos
- * Updated to include Shop events in the UI category
+ * Updated to include Collection events
  */
 
 /**
@@ -150,4 +150,15 @@ export const SHOP_EVENTS = {
   CARD_PURCHASE_ATTEMPT: 'shop:card_purchase_attempt',
   CARD_PURCHASE_SUCCESS: 'shop:card_purchase_success',
   CARD_PURCHASE_FAILURE: 'shop:card_purchase_failure'
+};
+
+/**
+ * Collection-related events
+ * Events for the card collection viewer
+ */
+export const COLLECTION_EVENTS = {
+  OPEN: 'collection:open',
+  CLOSE: 'collection:close',
+  PAGE_CHANGE: 'collection:page_change',
+  CARD_VIEW: 'collection:card_view'
 };

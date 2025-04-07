@@ -1,17 +1,19 @@
+/**
+ * ButtonSystem - Central coordinator for all button-related functionality
+ * Manages button creation, positioning, and actions using the event system
+ * Updated to include collection button and navigation arrows
+ */
 import ButtonRenderer from './ButtonRenderer.js';
 import ButtonInputHandler from './ButtonInputHandler.js';
 import MoveButton from './buttons/MoveButton.js';
 import JumpButton from './buttons/JumpButton.js';
 import AttackButton from './buttons/AttackButton.js';
 import ShopButton from './buttons/ShopButton.js';
+import CollectionButton from './buttons/CollectionButton.js';
+import ArrowButton from './buttons/ArrowButton.js';
 import GameEvents from '../events/GameEvents.js';
 import { INPUT_EVENTS, CHARACTER_EVENTS, UI_EVENTS } from '../events/EventTypes.js';
 
-/**
- * ButtonSystem - Central coordinator for all button-related functionality
- * Manages button creation, positioning, and actions using the event system
- * Updated to coordinate button positioning with collectible display
- */
 export default class ButtonSystem {
   /**
    * Create a new button system
@@ -38,6 +40,9 @@ export default class ButtonSystem {
     
     // Track button active states
     this.activeButtons = new Set();
+    
+    // Track buttons that should only be visible in specific states
+    this.contextualButtons = ['leftArrow', 'rightArrow'];
     
     // Initialize the renderer
     this.renderer = new ButtonRenderer(context, this.buttons);
@@ -122,6 +127,23 @@ export default class ButtonSystem {
         this.updateButtonPositions();
       }
     });
+    
+    // Listen for collection open/close events to toggle arrow buttons
+    GameEvents.on('collection:open', () => {
+      this.showContextualButtons(true);
+    });
+    
+    GameEvents.on('collection:close', () => {
+      this.showContextualButtons(false);
+    });
+  }
+  
+  /**
+   * Toggle visibility of contextual buttons
+   * @param {boolean} visible - Whether buttons should be visible
+   */
+  showContextualButtons(visible) {
+    this.contextualButtonsVisible = visible;
   }
   
   /**
@@ -175,7 +197,10 @@ export default class ButtonSystem {
       move: new MoveButton(),
       jump: new JumpButton(),
       attack: new AttackButton(),
-      shop: new ShopButton()
+      shop: new ShopButton(),
+      collection: new CollectionButton(),
+      leftArrow: new ArrowButton(0, 0, 50, 50, 'left'),
+      rightArrow: new ArrowButton(0, 0, 50, 50, 'right')
     };
   }
   
@@ -188,95 +213,143 @@ export default class ButtonSystem {
     
     // Start input handling
     this.inputHandler.initialize();
+    
+    // Set default visibility for contextual buttons
+    this.contextualButtonsVisible = false;
+    
+    // Pass navigation buttons to ShopManager if it exists
+    if (this.game && this.game.shopManager) {
+      this.game.shopManager.setNavigationButtons(
+        this.buttons.leftArrow,
+        this.buttons.rightArrow
+      );
+    }
   }
   
   /**
    * Update positions of all buttons based on canvas dimensions and collectible display
    */
   updateButtonPositions() {
-  // Add this flag to prevent infinite loops
-  if (this._isUpdatingPositions) return;
-  this._isUpdatingPositions = true;
+    // Add this flag to prevent infinite loops
+    if (this._isUpdatingPositions) return;
+    this._isUpdatingPositions = true;
 
-  const canvas = this.canvas;
-  const canvasHeight = canvas.height;
-  const canvasWidth = canvas.width;
-  
-  // Calculate ground positioning based on current canvas dimensions
-  const groundY = canvasHeight * 0.8;
-  const groundHeight = canvasHeight * 0.2;
-  const grassHeight = groundHeight * 0.3; // top portion of the ground (grass)
-  const dirtHeight = groundHeight * 0.7;  // remaining (dirt)
-  
-  // Calculate the vertical center of the dirt area
-  const dirtCenterY = groundY + grassHeight + (dirtHeight / 2);
-  
-  // Define button dimensions relative to canvas size for better responsiveness
-  const btnHeight = Math.min(dirtHeight * 0.7, canvasHeight * 0.08); // button height with max constraint
-  const btnWidth = btnHeight * 2;     // width is set to twice the height
-  
-  // Define horizontal gaps that scale with canvas size
-  const sideGap = Math.max(10, canvasWidth * 0.02);     // gap from canvas left/right edges (minimum 10px)
-  const buttonGap = Math.max(5, canvasWidth * 0.01);   // gap between Attack and Jump buttons (minimum 5px)
-  
-  // Update Move button position
-  this.buttons.move.updatePosition(
-    sideGap,
-    dirtCenterY - btnHeight / 2,
-    btnWidth,
-    btnHeight
-  );
-  
-  // Update Jump button position
-  this.buttons.jump.updatePosition(
-    canvasWidth - sideGap - btnWidth,
-    dirtCenterY - btnHeight / 2,
-    btnWidth,
-    btnHeight
-  );
-  
-  // Update Attack button position
-  this.buttons.attack.updatePosition(
-    canvasWidth - sideGap - btnWidth - buttonGap - btnWidth,
-    dirtCenterY - btnHeight / 2,
-    btnWidth,
-    btnHeight
-  );
-  
-  // Position shop button to the right of collectible display
-  const padding = this.collectibleDisplayInfo.padding || 10;
-  const displayWidth = this.collectibleDisplayInfo.width || 100;
-  const displayHeight = this.collectibleDisplayInfo.height || 40;
-  
-  // Position shop button at same Y as collectible display with matching height
-  this.buttons.shop.updatePosition(
-    displayWidth + padding * 2, // Position after the collectible display with padding
-    padding, // Same Y position as collectible display
-    displayHeight * 2, // Width that's proportional to the display height
-    displayHeight // Exactly match the collectible display height
-  );
-  
-  // Emit UI update event
-  GameEvents.emitUI(UI_EVENTS.UPDATE, {
-    type: 'button_positions',
-    buttons: {
-      move: { x: this.buttons.move.x, y: this.buttons.move.y, width: btnWidth, height: btnHeight },
-      jump: { x: this.buttons.jump.x, y: this.buttons.jump.y, width: btnWidth, height: btnHeight },
-      attack: { x: this.buttons.attack.x, y: this.buttons.attack.y, width: btnWidth, height: btnHeight },
-      shop: { x: this.buttons.shop.x, y: this.buttons.shop.y, width: displayHeight * 2, height: displayHeight }
-    }
-  });
-  
-  // Reset the update flag to allow future updates
-  this._isUpdatingPositions = false;
-}
-
+    const canvas = this.canvas;
+    const canvasHeight = canvas.height;
+    const canvasWidth = canvas.width;
+    
+    // Calculate ground positioning based on current canvas dimensions
+    const groundY = canvasHeight * 0.8;
+    const groundHeight = canvasHeight * 0.2;
+    const grassHeight = groundHeight * 0.3; // top portion of the ground (grass)
+    const dirtHeight = groundHeight * 0.7;  // remaining (dirt)
+    
+    // Calculate the vertical center of the dirt area
+    const dirtCenterY = groundY + grassHeight + (dirtHeight / 2);
+    
+    // Define button dimensions relative to canvas size for better responsiveness
+    const btnHeight = Math.min(dirtHeight * 0.7, canvasHeight * 0.08); // button height with max constraint
+    const btnWidth = btnHeight * 2;     // width is set to twice the height
+    
+    // Define horizontal gaps that scale with canvas size
+    const sideGap = Math.max(10, canvasWidth * 0.02);     // gap from canvas left/right edges (minimum 10px)
+    const buttonGap = Math.max(5, canvasWidth * 0.01);   // gap between Attack and Jump buttons (minimum 5px)
+    
+    // Update Move button position
+    this.buttons.move.updatePosition(
+      sideGap,
+      dirtCenterY - btnHeight / 2,
+      btnWidth,
+      btnHeight
+    );
+    
+    // Update Jump button position
+    this.buttons.jump.updatePosition(
+      canvasWidth - sideGap - btnWidth,
+      dirtCenterY - btnHeight / 2,
+      btnWidth,
+      btnHeight
+    );
+    
+    // Update Attack button position
+    this.buttons.attack.updatePosition(
+      canvasWidth - sideGap - btnWidth - buttonGap - btnWidth,
+      dirtCenterY - btnHeight / 2,
+      btnWidth,
+      btnHeight
+    );
+    
+    // Position collectible-related UI at the top
+    const padding = this.collectibleDisplayInfo.padding || 10;
+    const displayWidth = this.collectibleDisplayInfo.width || 100;
+    const displayHeight = this.collectibleDisplayInfo.height || 40;
+    
+    // Position shop button to the right of collectible display
+    this.buttons.shop.updatePosition(
+      displayWidth + padding * 2, // Position after the collectible display with padding
+      padding, // Same Y position as collectible display
+      displayHeight * 2, // Width that's proportional to the display height
+      displayHeight // Exactly match the collectible display height
+    );
+    
+    // Position collection button after shop button
+    this.buttons.collection.updatePosition(
+      displayWidth + padding * 2 + displayHeight * 2 + padding, // After shop button
+      padding, // Same Y position
+      displayHeight * 2, // Same width as shop button
+      displayHeight // Same height
+    );
+    
+    // Position arrow buttons for collection navigation - centered vertically
+    const arrowSize = btnHeight * 0.8;
+    const arrowY = canvasHeight / 2 - arrowSize / 2;
+    
+    this.buttons.leftArrow.updatePosition(
+      sideGap, // Left edge with gap
+      arrowY,
+      arrowSize,
+      arrowSize
+    );
+    
+    this.buttons.rightArrow.updatePosition(
+      canvasWidth - sideGap - arrowSize, // Right edge with gap
+      arrowY,
+      arrowSize,
+      arrowSize
+    );
+    
+    // Emit UI update event
+    GameEvents.emitUI(UI_EVENTS.UPDATE, {
+      type: 'button_positions',
+      buttons: {
+        move: { x: this.buttons.move.x, y: this.buttons.move.y, width: btnWidth, height: btnHeight },
+        jump: { x: this.buttons.jump.x, y: this.buttons.jump.y, width: btnWidth, height: btnHeight },
+        attack: { x: this.buttons.attack.x, y: this.buttons.attack.y, width: btnWidth, height: btnHeight },
+        shop: { x: this.buttons.shop.x, y: this.buttons.shop.y, width: displayHeight * 2, height: displayHeight },
+        collection: { x: this.buttons.collection.x, y: this.buttons.collection.y, width: displayHeight * 2, height: displayHeight },
+        leftArrow: { x: this.buttons.leftArrow.x, y: this.buttons.leftArrow.y, width: arrowSize, height: arrowSize },
+        rightArrow: { x: this.buttons.rightArrow.x, y: this.buttons.rightArrow.y, width: arrowSize, height: arrowSize }
+      }
+    });
+    
+    // Reset the update flag to allow future updates
+    this._isUpdatingPositions = false;
+  }
   
   /**
    * Draw all buttons
    */
   draw() {
-    this.renderer.draw();
+    // Filter buttons to draw based on context
+    Object.entries(this.buttons).forEach(([key, button]) => {
+      // Skip contextual buttons if not visible
+      if (this.contextualButtons.includes(key) && !this.contextualButtonsVisible) {
+        return;
+      }
+      
+      // Draw the button
+      this.renderer.drawButton(button);
+    });
     
     // Update attack cooldown indicator if needed
     if (this.game && this.game.attacker) {

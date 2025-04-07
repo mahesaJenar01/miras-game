@@ -1,10 +1,11 @@
 /**
  * ShopManager.js - Manages shop functionality and coordinates between components
- * Fixed version with proper card handling and button disabling
+ * Enhanced with card collection viewing functionality
  */
 import ShopMenu from './core/ShopMenu.js';
+import CollectionMenu from './core/CollectionMenu.js';
 import GameEvents from '../../events/GameEvents.js';
-import { SHOP_EVENTS, INPUT_EVENTS, GAME_EVENTS, COLLECTIBLE_EVENTS, UI_EVENTS } from '../../events/EventTypes.js';
+import { SHOP_EVENTS, INPUT_EVENTS, GAME_EVENTS, UI_EVENTS, COLLECTION_EVENTS } from '../../events/EventTypes.js';
 
 class ShopManager {
   /**
@@ -34,6 +35,10 @@ class ShopManager {
     this.resizeDebounceTimer = null;
     this.resizeDebounceDelay = 100; // ms
     
+    // Navigation button references
+    this.leftArrowBtn = null;
+    this.rightArrowBtn = null;
+    
     // Affirmation messages
     this.allAffirmations = [
       "You are strong, beautiful, and capable of achieving anything you set your mind to.",
@@ -52,14 +57,22 @@ class ShopManager {
       this.currentPrice
     );
     
+    // Create collection menu
+    this.collectionMenu = new CollectionMenu(
+      context,
+      canvas,
+      this.purchasedCards
+    );
+    
     // Register event listeners
     this.registerEventListeners();
     
     // Load saved state if available
     this.loadSavedState();
 
-    // Initialize shop button state
+    // Initialize button states
     this.updateShopButtonState();
+    this.updateCollectionButtonState();
   }
   
   /**
@@ -70,19 +83,29 @@ class ShopManager {
     GameEvents.on(INPUT_EVENTS.BUTTON_PRESS, (data) => {
       if (data.buttonKey === 'shop') {
         this.openShop();
+      } else if (data.buttonKey === 'collection') {
+        this.openCollection();
+      } else if (data.buttonKey === 'leftArrow') {
+        this.handleLeftArrowPress();
+      } else if (data.buttonKey === 'rightArrow') {
+        this.handleRightArrowPress();
       }
     });
     
-    // Mouse events for shop menu interactions
+    // Mouse events for shop and collection menu interactions
     GameEvents.on(INPUT_EVENTS.MOUSE_DOWN, (data) => {
       if (this.shopMenu.isOpen) {
         this.shopMenu.handleClick(data.x, data.y);
+      } else if (this.collectionMenu.isOpen) {
+        this.collectionMenu.handleClick(data.x, data.y);
       }
     });
     
     GameEvents.on(INPUT_EVENTS.MOUSE_MOVE, (data) => {
       if (this.shopMenu.isOpen) {
         this.shopMenu.handleMouseMove(data.x, data.y);
+      } else if (this.collectionMenu.isOpen) {
+        this.collectionMenu.handleMouseMove(data.x, data.y);
       }
     });
     
@@ -90,6 +113,8 @@ class ShopManager {
     GameEvents.on(INPUT_EVENTS.TOUCH_START, (data) => {
       if (this.shopMenu.isOpen) {
         this.shopMenu.handleClick(data.x, data.y);
+      } else if (this.collectionMenu.isOpen) {
+        this.collectionMenu.handleClick(data.x, data.y);
       }
     });
     
@@ -107,15 +132,51 @@ class ShopManager {
       this.attemptPurchaseCard(data);
     });
     
-    // Listen for shop close events to potentially save state
+    // Listen for shop and collection close events to potentially save state
     GameEvents.on(SHOP_EVENTS.CLOSE, () => {
       this.saveState();
     });
+    
+    GameEvents.on(COLLECTION_EVENTS.CLOSE, () => {
+      this.saveState();
+    });
 
-    // Check shop button state periodically
+    // Check button states periodically
     setInterval(() => {
       this.updateShopButtonState();
+      this.updateCollectionButtonState();
     }, 2000); // Check every 2 seconds
+  }
+  
+  /**
+   * Set navigation button references
+   * @param {ArrowButton} leftBtn - Left arrow button
+   * @param {ArrowButton} rightBtn - Right arrow button
+   */
+  setNavigationButtons(leftBtn, rightBtn) {
+    this.leftArrowBtn = leftBtn;
+    this.rightArrowBtn = rightBtn;
+    
+    // Pass to collection menu
+    this.collectionMenu.setNavigationButtons(leftBtn, rightBtn);
+  }
+  
+  /**
+   * Handle left arrow button press for collection navigation
+   */
+  handleLeftArrowPress() {
+    if (this.collectionMenu.isOpen) {
+      this.collectionMenu.prevPage();
+    }
+  }
+  
+  /**
+   * Handle right arrow button press for collection navigation
+   */
+  handleRightArrowPress() {
+    if (this.collectionMenu.isOpen) {
+      this.collectionMenu.nextPage();
+    }
   }
   
   /**
@@ -142,6 +203,29 @@ class ShopManager {
   }
   
   /**
+   * Update the collection button's enabled/disabled state
+   */
+  updateCollectionButtonState() {
+    const hasCollectedCards = this.purchasedCards.length > 0;
+    
+    // Find the collection button in the game
+    const collectionButton = window.game && window.game.buttonSystem ? 
+                             window.game.buttonSystem.buttons.collection : null;
+    
+    if (collectionButton) {
+      // Set disabled state on the button
+      collectionButton.isDisabled = !hasCollectedCards;
+      
+      // Emit UI update event for the button state
+      GameEvents.emitUI(UI_EVENTS.BUTTON_STATE_CHANGE, {
+        buttonKey: 'collection',
+        isDisabled: !hasCollectedCards,
+        reason: !hasCollectedCards ? 'no_cards_collected' : null
+      });
+    }
+  }
+  
+  /**
    * Handle resize events with debouncing to prevent layout thrashing
    */
   handleResize() {
@@ -163,6 +247,11 @@ class ShopManager {
         // Update shop menu layout
         if (this.shopMenu) {
           this.shopMenu.handleResize();
+        }
+        
+        // Update collection menu layout
+        if (this.collectionMenu) {
+          this.collectionMenu.handleResize();
         }
       }
       
@@ -195,8 +284,12 @@ class ShopManager {
         // Update the shop menu with current price and available cards
         this.shopMenu.updateCards(this.getAvailableAffirmations(), this.currentPrice);
         
-        // Update shop button state
+        // Update the collection menu with purchased cards
+        this.collectionMenu.updateCollection(this.purchasedCards);
+        
+        // Update button states
         this.updateShopButtonState();
+        this.updateCollectionButtonState();
       }
     } catch (e) {
       console.error('Error loading saved shop state:', e);
@@ -217,8 +310,9 @@ class ShopManager {
       };
       localStorage.setItem('shopState', JSON.stringify(state));
       
-      // Update shop button state when state is saved
+      // Update button states when state is saved
       this.updateShopButtonState();
+      this.updateCollectionButtonState();
     } catch (e) {
       console.error('Error saving shop state:', e);
     }
@@ -229,7 +323,7 @@ class ShopManager {
    * @returns {string[]} Array of available affirmation messages
    */
   getAvailableAffirmations() {
-    // Filter out purchased messages - never return all cards again
+    // Filter out purchased messages
     return this.allAffirmations.filter(message => !this.purchasedCards.includes(message));
   }
   
@@ -237,6 +331,11 @@ class ShopManager {
    * Open the shop menu
    */
   openShop() {
+    // Close collection menu if open
+    if (this.collectionMenu.isOpen) {
+      this.collectionMenu.close();
+    }
+    
     // Ensure we have the latest available cards
     const availableAffirmations = this.getAvailableAffirmations();
     
@@ -255,11 +354,49 @@ class ShopManager {
   }
   
   /**
+   * Open the collection menu
+   */
+  openCollection() {
+    // Close shop menu if open
+    if (this.shopMenu.isOpen) {
+      this.shopMenu.close();
+    }
+    
+    // Only open if there are purchased cards
+    if (this.purchasedCards.length > 0) {
+      // Ensure collection menu has latest cards
+      this.collectionMenu.updateCollection(this.purchasedCards);
+      this.collectionMenu.open();
+      
+      // Ensure navigation buttons are visible when the collection is open
+      if (this.leftArrowBtn && this.rightArrowBtn) {
+        this.collectionMenu.setNavigationButtons(this.leftArrowBtn, this.rightArrowBtn);
+      }
+    } else {
+      // If no cards collected, emit notification event
+      GameEvents.emitUI(UI_EVENTS.UPDATE, {
+        type: 'notification',
+        message: 'You haven\'t purchased any cards yet!'
+      });
+    }
+  }
+  
+  /**
    * Close the shop menu
    */
   closeShop() {
     if (this.shopMenu) {
       this.shopMenu.close();
+      this.saveState(); // Save state when closing
+    }
+  }
+  
+  /**
+   * Close the collection menu
+   */
+  closeCollection() {
+    if (this.collectionMenu) {
+      this.collectionMenu.close();
       this.saveState(); // Save state when closing
     }
   }
@@ -356,6 +493,9 @@ class ShopManager {
       
       // Reveal the card using the proper method
       this.shopMenu.cardDisplay.revealCard(this.lastAttemptedPurchase);
+      
+      // Update the collection menu
+      this.collectionMenu.updateCollection(this.purchasedCards);
     }
     
     // Calculate the next price with random increase
@@ -382,8 +522,9 @@ class ShopManager {
           this.shopMenu.close();
         }
         
-        // Update shop button state based on available cards
+        // Update button states based on available cards
         this.updateShopButtonState();
+        this.updateCollectionButtonState();
       }, 2000); // Wait 2 seconds after purchase to refresh cards
     }
     
@@ -431,14 +572,25 @@ class ShopManager {
     if (this.shopMenu) {
       this.shopMenu.update();
     }
+    
+    // Update collection menu state
+    if (this.collectionMenu) {
+      this.collectionMenu.update();
+    }
   }
   
   /**
    * Draw the shop components
    */
   draw() {
+    // Draw shop menu if open
     if (this.shopMenu) {
       this.shopMenu.draw();
+    }
+    
+    // Draw collection menu if open
+    if (this.collectionMenu) {
+      this.collectionMenu.draw();
     }
   }
   
@@ -455,7 +607,15 @@ class ShopManager {
     // Save state before cleanup
     this.saveState();
     
-    // This method could be expanded to remove specific event listeners in a full implementation
+    // Clean up shop menu
+    if (this.shopMenu && this.shopMenu.cleanup) {
+      this.shopMenu.cleanup();
+    }
+    
+    // Clean up collection menu
+    if (this.collectionMenu && this.collectionMenu.cleanup) {
+      this.collectionMenu.cleanup();
+    }
   }
 }
 

@@ -188,10 +188,10 @@ class CollectibleManager {
       }
     }
     
-    // Determine size based on type and scaled for current screen
-    let size = 15 * scaleFactor; // Default size
-    if (type === 'pinktulip') size = 18 * scaleFactor;
-    else if (type === 'goldentulip') size = 20 * scaleFactor;
+    // INCREASED SIZE - Determine size based on type and scaled for current screen
+    let size = 40 * scaleFactor; // Default size
+    if (type === 'pinktulip') size = 36 * scaleFactor; // Doubled from 18
+    else if (type === 'goldentulip') size = 40 * scaleFactor; // Doubled from 20
     
     // Create and add the collectible
     const collectible = new Collectible(
@@ -306,11 +306,11 @@ class CollectibleManager {
     this.collectibles.forEach(collectible => {
       // Adjust size based on type and new scale
       if (collectible.type === 'redtulip') {
-        collectible.size = 15 * scaleFactor;
+        collectible.size = 40 * scaleFactor;
       } else if (collectible.type === 'pinktulip') {
-        collectible.size = 18 * scaleFactor;
+        collectible.size = 36 * scaleFactor;
       } else if (collectible.type === 'goldentulip') {
-        collectible.size = 20 * scaleFactor;
+        collectible.size = 40 * scaleFactor;
       }
       
       // Adjust Y position to maintain relative position
