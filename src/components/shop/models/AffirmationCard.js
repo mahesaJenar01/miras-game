@@ -164,13 +164,23 @@ class AffirmationCard {
   }
   
   /**
-   * Draw the affirmation message (when revealed)
+   * Modified drawMessage method for AffirmationCard.js
+   * Ensures complete affirmation messages are visible
    */
   drawMessage() {
     const { context, width, height, message } = this;
+      
+    // Calculate font size proportional to card dimensions and message length
+    // Adjust font size based on message length to ensure fit
+    const baseSize = Math.max(12, Math.min(width * 0.07, height * 0.05, 18));
+    const messageLength = message.length;
     
-    // Calculate font size proportional to card dimensions
-    const fontSize = Math.max(12, Math.min(width * 0.07, height * 0.05, 18));
+    // Scale font size inversely to message length for longer messages
+    let fontSize = baseSize;
+    if (messageLength > 100) {
+      fontSize = Math.max(10, baseSize * (1 - (messageLength - 100) / 300));
+    }
+    
     context.font = `bold ${fontSize}px Arial`;
     context.fillStyle = "#333";
     context.textAlign = 'center';
@@ -182,7 +192,7 @@ class AffirmationCard {
     
     // Word wrap the message to fit the card
     const words = message.split(' ');
-    const lineHeight = fontSize * 1.3; // Line height based on font size
+    const lineHeight = fontSize * 1.2; // Slightly tighter line height
     
     let line = '';
     let lines = [];
@@ -203,20 +213,34 @@ class AffirmationCard {
     // Add the final line
     lines.push(line);
     
-    // Limit number of lines to fit in card
-    const maxLines = Math.floor((height * 0.8) / lineHeight);
-    if (lines.length > maxLines) {
-      lines = lines.slice(0, maxLines - 1);
-      lines.push("...");
-    }
-    
-    // Draw each line of text, centered in the card
+    // Calculate total height needed for the text
     const totalTextHeight = lines.length * lineHeight;
-    const startY = (height - totalTextHeight) / 2;
     
-    lines.forEach((line, index) => {
-      context.fillText(line.trim(), width/2, startY + index * lineHeight);
-    });
+    // If text is too tall, reduce font size further to fit
+    if (totalTextHeight > height * 0.9) {
+      const scaleFactor = (height * 0.9) / totalTextHeight;
+      fontSize = Math.max(8, fontSize * scaleFactor); // Minimum 8px font size
+      
+      // Redraw with adjusted font size
+      context.font = `bold ${fontSize}px Arial`;
+      
+      // Recalculate line height
+      const adjustedLineHeight = fontSize * 1.2;
+      
+      // Draw each line of text, centered in the card
+      const startY = (height - (lines.length * adjustedLineHeight)) / 2;
+      
+      lines.forEach((line, index) => {
+        context.fillText(line.trim(), width/2, startY + index * adjustedLineHeight);
+      });
+    } else {
+      // Draw normally if text fits
+      const startY = (height - totalTextHeight) / 2;
+      
+      lines.forEach((line, index) => {
+        context.fillText(line.trim(), width/2, startY + index * lineHeight);
+      });
+    }
   }
   
   /**
