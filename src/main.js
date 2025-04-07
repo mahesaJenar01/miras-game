@@ -23,7 +23,15 @@ class Game {
     this.canvas = canvas;
     this.components = components; // { scene, stickfigure }
     this.worldOffset = 0;
-    this.gameSpeed = 3.5;
+    
+    // Fixed absolute speed in pixels per frame (no longer dependent on window size)
+    this.gameSpeed = 5; // pixels per frame
+    
+    // Store reference game size for scaling calculations
+    this.referenceWidth = 1920; // Reference width for responsive scaling
+    this.referenceHeight = 1080; // Reference height for responsive scaling
+    
+    // Game state
     this.isWalking = false;
     this.animationFrameId = null;
     
@@ -167,13 +175,13 @@ class Game {
   animate = () => {
     this.animationFrameId = requestAnimationFrame(this.animate);
     this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
+  
     const { scene, stickfigure } = this.components;
-
+  
     // Update and draw the scene with current world offset
     scene.update(this.worldOffset);
     scene.draw(this.worldOffset);
-
+  
     // Update stickfigure
     if (stickfigure.update) {
       stickfigure.update();
@@ -198,10 +206,12 @@ class Game {
       this.collectibleManager.update();
       this.collectibleManager.draw(this.worldOffset);
     }
-
-    // Update world offset if the stickfigure is walking
+  
+    // Update world offset using fixed speed if the stickfigure is walking
     if (this.isWalking) {
       const prevOffset = this.worldOffset;
+      
+      // Use a constant pixel increment for consistent speed regardless of window size
       this.worldOffset += this.gameSpeed;
       
       // Emit world update event if the offset changed
@@ -212,7 +222,7 @@ class Game {
         });
       }
     }
-
+  
     // Draw buttons using the button system
     this.buttonSystem.draw();
     
@@ -227,6 +237,27 @@ class Game {
       this.shopManager.update();
       this.shopManager.draw();
     }
+  }  
+
+  getScaleFactor() {
+    // Calculate scale factor between current size and reference size
+    const widthScale = this.canvas.width / this.referenceWidth;
+    const heightScale = this.canvas.height / this.referenceHeight;
+    
+    // Use the smaller scale to ensure everything fits
+    return Math.min(widthScale, heightScale);
+  }
+  
+  // Method to convert world units to screen pixels
+  worldToScreen(worldX) {
+    const scaleFactor = this.getScaleFactor();
+    return worldX * scaleFactor;
+  }
+
+  // Method to convert screen pixels to world units
+  screenToWorld(screenX) {
+    const scaleFactor = this.getScaleFactor();
+    return screenX / scaleFactor;
   }
 
   /**

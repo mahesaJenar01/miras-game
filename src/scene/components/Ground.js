@@ -1,38 +1,22 @@
 /**
  * Ground.js - Manages the ground with grass, dirt, and decorations
- * Uses modular components: GrassBlade, Flower, and Butterfly
+ * Modified to provide consistent movement regardless of window size
  */
 import GrassBlade from './GrassBlade.js';
 import Flower from './Flower.js';
 import Butterfly from './Butterfly.js';
 
-class BaseGround {
+class Ground {
   constructor(context, x, y, height, width) {
+    this.context = context;
     this.x = x;
     this.y = y;
     this.width = width;
     this.height = height;
-    this.context = context;
-  }
-}
-
-class SubGround extends BaseGround {
-  constructor(context, x, y, height, width, color) {
-    super(context, x, y, height, width);
-    this.color = color;
-  }
-
-  draw() {
-    this.context.beginPath();
-    this.context.fillStyle = this.color;
-    this.context.fillRect(this.x, this.y, this.width, this.height);
-    this.context.closePath();
-  }
-}
-
-class Ground extends BaseGround {
-  constructor(context, x, y, height, width) {
-    super(context, x, y, height, width);
+    
+    // Base tile width defines the repeating element size
+    // This should be a fixed size rather than derived from canvas width
+    this.baseTileWidth = 1000; // Fixed tile width for consistency
     
     // Proportions
     this.grassHeight = this.height * 0.3;
@@ -44,7 +28,7 @@ class Ground extends BaseGround {
     
     // Create grass blades using the GrassBlade component
     this.grassBlades = GrassBlade.generateMultiple(
-      0, width, 10, this.y, this.grassHeight * 0.5, this.grassColors.length
+      0, this.baseTileWidth, 10, this.y, this.grassHeight * 0.5, this.grassColors.length
     );
     
     // Store flower colors
@@ -67,12 +51,12 @@ class Ground extends BaseGround {
     };
     
     // Generate flowers using the Flower class
-    const flowerCount = Math.floor(this.width / 100);
+    const flowerCount = Math.floor(this.baseTileWidth / 100); // Based on fixed tile width
     const flowers = [];
     
     for (let i = 0; i < flowerCount; i++) {
       flowers.push(new Flower(
-        seededRandom(i * 0.1) * this.width,
+        seededRandom(i * 0.1) * this.baseTileWidth,
         seededRandom(i * 0.2) * (this.grassHeight * 0.8),
         3 + seededRandom(i * 0.3) * 4,
         this.flowerColors[Math.floor(seededRandom(i * 0.4) * this.flowerColors.length)]
@@ -80,12 +64,12 @@ class Ground extends BaseGround {
     }
     
     // Generate butterflies using the Butterfly class
-    const butterflyCount = Math.floor(this.width / 300);
+    const butterflyCount = Math.floor(this.baseTileWidth / 300); // Based on fixed tile width
     const butterflies = [];
     
     for (let i = 0; i < butterflyCount; i++) {
       butterflies.push(new Butterfly(
-        seededRandom(i * 0.5) * this.width,
+        seededRandom(i * 0.5) * this.baseTileWidth,
         seededRandom(i * 0.6) * 40,
         5 + seededRandom(i * 0.7) * 3,
         this.flowerColors[Math.floor(seededRandom(i * 0.8) * this.flowerColors.length)],
@@ -118,7 +102,7 @@ class Ground extends BaseGround {
   // Update butterflies for a specific tile
   updateButterflies(tileIndex) {
     const decorations = this.getTileDecorations(tileIndex);
-    decorations.butterflies.forEach(butterfly => butterfly.update(this.width));
+    decorations.butterflies.forEach(butterfly => butterfly.update(this.baseTileWidth));
   }
   
   // Draw a single ground tile at the given x offset and tile index
@@ -129,7 +113,7 @@ class Ground extends BaseGround {
     grassGradient.addColorStop(1, this.grassColors[2]);
     this.context.beginPath();
     this.context.fillStyle = grassGradient;
-    this.context.fillRect(xOffset, this.y, this.width, this.grassHeight);
+    this.context.fillRect(xOffset, this.y, this.baseTileWidth, this.grassHeight);
     this.context.closePath();
     
     // Draw dirt with a gradient
@@ -138,7 +122,7 @@ class Ground extends BaseGround {
     dirtGradient.addColorStop(1, this.dirtColors[2]);
     this.context.beginPath();
     this.context.fillStyle = dirtGradient;
-    this.context.fillRect(xOffset, this.y + this.grassHeight, this.width, this.dirtHeight);
+    this.context.fillRect(xOffset, this.y + this.grassHeight, this.baseTileWidth, this.dirtHeight);
     this.context.closePath();
     
     // Draw grass blade details
@@ -175,27 +159,31 @@ class Ground extends BaseGround {
     });
   }
   
-  // The main draw method that handles parallax scrolling
+  // The main draw method that handles consistent tiling regardless of screen size
   draw(worldOffset) {
     // Canvas reference - we need this for proper calculations
     const canvas = this.context.canvas;
     
     // Calculate the number of full tiles we've scrolled past
-    const tilesPassed = Math.floor(worldOffset / this.width);
+    // Use baseTileWidth instead of this.width for consistency
+    const tilesPassed = Math.floor(worldOffset / this.baseTileWidth);
     
     // Calculate the tile offset using modulus for seamless tiling
-    const offset = worldOffset % this.width;
+    const offset = worldOffset % this.baseTileWidth;
     
     // Update dynamic elements (like butterflies) for both visible tiles
     this.updateButterflies(tilesPassed);
     this.updateButterflies(tilesPassed + 1);
     
-    // Draw the first tile at the adjusted x position with its correct tile index
-    this.drawTile(this.x - offset, tilesPassed);
+    // Draw enough tiles to cover the visible area
+    let currentTileIndex = tilesPassed;
+    let currentXOffset = this.x - offset;
     
-    // Draw a second tile if needed to cover the full canvas width
-    if ((this.x - offset + this.width) < canvas.width) {
-      this.drawTile(this.x - offset + this.width, tilesPassed + 1);
+    // Keep drawing tiles until we've covered the entire canvas width
+    while (currentXOffset < canvas.width) {
+      this.drawTile(currentXOffset, currentTileIndex);
+      currentXOffset += this.baseTileWidth;
+      currentTileIndex++;
     }
   }
   
@@ -206,9 +194,9 @@ class Ground extends BaseGround {
     this.grassHeight = this.height * 0.3;
     this.dirtHeight = this.height - this.grassHeight;
     
-    // Regenerate grass blades for the new width
+    // Regenerate grass blades using constant baseTileWidth
     this.grassBlades = GrassBlade.generateMultiple(
-      0, width, 10, this.y, this.grassHeight * 0.5, this.grassColors.length
+      0, this.baseTileWidth, 10, this.y, this.grassHeight * 0.5, this.grassColors.length
     );
     
     // Clear cached decorations since dimensions have changed

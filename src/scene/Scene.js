@@ -1,8 +1,8 @@
 /**
- * Scene.js - Main container for all scene elements
- * Encapsulates sky, sun, clouds, ground and their interactions
- * Updated to use the event system
+ * Modified Scene.js with improved parallax and constant speed handling
+ * This focuses on rendering elements correctly while maintaining constant game speed
  */
+
 import SceneManager from './SceneManager.js';
 import Sky from './components/Sky.js';
 import Sun from './components/Sun.js';
@@ -23,6 +23,13 @@ class Scene {
     this.canvas = canvas;
     this.config = config;
     
+    // Store reference width for proper scaling
+    this.referenceWidth = 1920;
+    this.referenceHeight = 1080;
+    
+    // Calculate scale factor for rendering
+    this.updateScaleFactor();
+    
     // Initialize scene components
     this.initialize();
     
@@ -31,6 +38,15 @@ class Scene {
     
     // Register event listeners
     this.registerEventListeners();
+  }
+  
+  /**
+   * Update the scale factor based on canvas dimensions
+   */
+  updateScaleFactor() {
+    const widthScale = this.canvas.width / this.referenceWidth;
+    const heightScale = this.canvas.height / this.referenceHeight;
+    this.scaleFactor = Math.min(widthScale, heightScale);
   }
   
   /**
@@ -47,6 +63,7 @@ class Scene {
       const { width, height, config } = data;
       if (width && height && config) {
         this.resize(width, height, config);
+        this.updateScaleFactor();
       }
     });
     
@@ -83,7 +100,6 @@ class Scene {
   
   /**
    * Initialize all scene components
-   * Added defensive checks to prevent errors with undefined config
    */
   initialize() {
     const { context, canvas, config } = this;
@@ -172,15 +188,18 @@ class Scene {
   }
   
   /**
-   * Draw all scene components
+   * Draw all scene components with proper scaling
    * @param {number} worldOffset - The current world offset for parallax
    */
   draw(worldOffset) {
     // Use the stored world offset if none provided
     const offset = worldOffset !== undefined ? worldOffset : this.currentWorldOffset;
     
+    // Apply consistent parallax based on absolute pixel movement
+    const scaledOffset = offset;
+    
     // Draw components via the manager
-    this.manager.draw(offset);
+    this.manager.draw(scaledOffset);
   }
   
   /**
@@ -191,6 +210,7 @@ class Scene {
    */
   resize(width, height, config) {
     this.config = config;
+    this.updateScaleFactor();
     
     // Emit scene update event before reinitializing
     GameEvents.emitScene(SCENE_EVENTS.SCENERY_UPDATE, {

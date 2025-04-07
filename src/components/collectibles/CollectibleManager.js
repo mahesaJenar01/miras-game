@@ -1,8 +1,6 @@
 /**
  * CollectibleManager.js - Manages all collectible items in the game
- * Handles spawning, updating, collision detection, and collection
- * Updated to use tulip flowers instead of coins/stars/gems
- * Added localStorage support to persist collected flowers
+ * Modified to provide consistent positioning regardless of window size
  */
 import Collectible from './Collectible.js';
 import GameEvents from '../../events/GameEvents.js';
@@ -19,6 +17,11 @@ class CollectibleManager {
     this.canvas = canvas;
     this.collectibles = [];
     this.collected = 0;
+    
+    // Reference width and height for consistent positioning
+    this.referenceWidth = 1920;
+    this.referenceHeight = 1080;
+    
     this.typeDistribution = {
       redtulip: 0.7,  // 70% chance of spawning a red tulip (common)
       pinktulip: 0.2,  // 20% chance of spawning a pink tulip (uncommon)
@@ -37,6 +40,16 @@ class CollectibleManager {
     
     // Load previously saved flowers count from localStorage
     this.loadSavedFlowers();
+  }
+  
+  /**
+   * Get current scale factor based on reference dimensions
+   * @returns {number} The current scale factor
+   */
+  getScaleFactor() {
+    const widthScale = this.canvas.width / this.referenceWidth;
+    const heightScale = this.canvas.height / this.referenceHeight;
+    return Math.min(widthScale, heightScale);
   }
   
   /**
@@ -134,7 +147,8 @@ class CollectibleManager {
     
     // Spawn new collectibles periodically
     if (this.spawnTimer >= this.spawnInterval) {
-      this.spawnRandomCollectible(worldOffset + this.canvas.width);
+      // Spawn ahead of player with constant distance
+      this.spawnRandomCollectible(worldOffset + this.referenceWidth);
       this.spawnTimer = 0;
       
       // Gradually reduce spawn interval as game progresses (min 60 frames)
@@ -150,16 +164,16 @@ class CollectibleManager {
    * @param {number} xPos - X position to spawn at (defaults to random position ahead)
    */
   spawnRandomCollectible(xPos = null) {
-    // Get canvas dimensions
-    const { width, height } = this.canvas;
+    // Use reference dimensions for consistency
+    const minY = this.referenceHeight * 0.3;
+    const maxY = this.referenceHeight * 0.6;
     
-    // Determine spawn position
-    const x = xPos !== null ? xPos : Math.random() * width * 1.5 + width;
+    // Determine spawn position with fixed distance ahead
+    const x = xPos !== null ? xPos : Math.random() * this.referenceWidth * 1.5 + this.referenceWidth;
     
-    // Determine vertical position (in the middle third of the screen)
-    const minY = height * 0.3;
-    const maxY = height * 0.6;
-    const y = minY + Math.random() * (maxY - minY);
+    // Use scaled Y position
+    const scaleFactor = this.getScaleFactor();
+    const y = (minY + Math.random() * (maxY - minY)) * scaleFactor;
     
     // Determine collectible type based on distribution
     const typeRoll = Math.random();
@@ -174,10 +188,10 @@ class CollectibleManager {
       }
     }
     
-    // Determine size based on type
-    let size = 15; // Default size
-    if (type === 'pinktulip') size = 18;
-    else if (type === 'goldentulip') size = 20;
+    // Determine size based on type and scaled for current screen
+    let size = 15 * scaleFactor; // Default size
+    if (type === 'pinktulip') size = 18 * scaleFactor;
+    else if (type === 'goldentulip') size = 20 * scaleFactor;
     
     // Create and add the collectible
     const collectible = new Collectible(
@@ -209,7 +223,8 @@ class CollectibleManager {
    */
   removeOffscreenCollectibles(worldOffset) {
     // Remove collectibles that are too far behind the player
-    const removalThreshold = worldOffset - this.canvas.width * 0.5;
+    // Use a fixed absolute pixel value rather than screen-relative
+    const removalThreshold = worldOffset - 1000; // Fixed 1000px behind
     
     this.collectibles = this.collectibles.filter(collectible => {
       return collectible.active && collectible.x > removalThreshold;
@@ -227,9 +242,12 @@ class CollectibleManager {
     const worldOffset = window.game ? window.game.worldOffset : 0;
     const adjustedCharacterX = characterX + worldOffset;
     
+    // Scale the collision radius by the current scale factor
+    const scaledRadius = characterRadius * this.getScaleFactor();
+    
     // Check each active collectible for collision
     this.collectibles.forEach(collectible => {
-      if (collectible.active && collectible.checkCollision(adjustedCharacterX, characterY, characterRadius)) {
+      if (collectible.active && collectible.checkCollision(adjustedCharacterX, characterY, scaledRadius)) {
         // Handle collection
         this.collectItem(collectible);
       }
@@ -281,19 +299,23 @@ class CollectibleManager {
    * Adjust collectibles after canvas resize
    */
   adjustCollectiblesForResize() {
-    // Get new dimensions
-    const { height } = this.canvas;
+    // Get new dimensions and scale factor
+    const scaleFactor = this.getScaleFactor();
     
-    // Adjust vertical positions of collectibles to stay in the middle third
-    const minY = height * 0.3;
-    const maxY = height * 0.6;
-    
+    // Adjust collectible sizes and vertical positions
     this.collectibles.forEach(collectible => {
-      // Calculate a relative vertical position (0-1) based on screen height
-      const relativeY = collectible.y / this.canvas.height;
+      // Adjust size based on type and new scale
+      if (collectible.type === 'redtulip') {
+        collectible.size = 15 * scaleFactor;
+      } else if (collectible.type === 'pinktulip') {
+        collectible.size = 18 * scaleFactor;
+      } else if (collectible.type === 'goldentulip') {
+        collectible.size = 20 * scaleFactor;
+      }
       
-      // Apply that relative position to the new height, but keep within bounds
-      collectible.y = Math.max(minY, Math.min(maxY, relativeY * height));
+      // Adjust Y position to maintain relative position
+      const relativeY = collectible.y / (this.canvas.height * this.getScaleFactor());
+      collectible.y = relativeY * this.canvas.height * scaleFactor;
     });
   }
   
