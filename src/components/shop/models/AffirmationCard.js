@@ -1,6 +1,6 @@
 /**
  * AffirmationCard.js - Represents an affirmation card in the shop
- * Improved with more stable proportions and scaling
+ * Enhanced with better scaling and positioning
  */
 class AffirmationCard {
   /**
@@ -35,6 +35,9 @@ class AffirmationCard {
     this.targetX = x;
     this.targetY = y;
     
+    // Set scaling factor (default to 1)
+    this.scale = 1;
+    
     // Layout properties - store as ratios to maintain proportions
     this.layoutRatios = {
       cornerRadius: 0.06,     // Corner radius as ratio of card height
@@ -60,7 +63,7 @@ class AffirmationCard {
     // Save context state
     context.save();
     
-    // Apply scale effects based on selection or hover state
+    // Apply scaling and transformations
     this.applyTransformations();
     
     // Draw the card base (background and border)
@@ -82,33 +85,37 @@ class AffirmationCard {
    * Apply transformations based on card state
    */
   applyTransformations() {
-    const { context, x, y, width, height } = this;
+    const { context, x, y, width, height, scale } = this;
+    
+    // Apply base scale and position
+    context.translate(x + width/2, y + height/2);
     
     if (this.isSelected) {
       // Fixed scale of 1.1 for selected cards
-      const scale = 1.1;
-      context.translate(x + width/2, y + height/2);
-      context.scale(scale, scale);
-      context.translate(-(x + width/2), -(y + height/2));
+      context.scale(1.1, 1.1);
     } else if (this.isHovered) {
       // Apply hover effect
-      context.translate(x + width/2, y + height/2);
-      context.scale(this.hoverScale, this.hoverScale);
-      context.translate(-(x + width/2), -(y + height/2));
+      context.scale(this.hoverScale * scale, this.hoverScale * scale);
+    } else {
+      // Apply normal scaling
+      context.scale(scale, scale);
     }
+    
+    // Move back to top-left as reference point
+    context.translate(-(width/2), -(height/2));
   }
   
   /**
    * Draw the base card (background and border)
    */
   drawCardBase() {
-    const { context, x, y, width, height, darkerColor, color } = this;
+    const { context, width, height, darkerColor, color } = this;
     
     // Calculate corner radius based on current card dimensions
     const cornerRadius = Math.min(width, height) * this.layoutRatios.cornerRadius;
     
     context.beginPath();
-    this.roundRect(context, x, y, width, height, cornerRadius);
+    this.roundRect(context, 0, 0, width, height, cornerRadius);
     context.fillStyle = color;
     context.fill();
     
@@ -123,12 +130,12 @@ class AffirmationCard {
    * Draw the card back (when not revealed)
    */
   drawCardBack() {
-    const { context, x, y, width, height, darkerColor, lighterColor } = this;
+    const { context, width, height, darkerColor, lighterColor } = this;
     
     // Draw a heart in the center with proportional sizing
     const heartSize = Math.min(width, height) * this.layoutRatios.heartSizeRatio;
-    const heartX = x + width/2;
-    const heartY = y + height/2;
+    const heartX = width/2;
+    const heartY = height/2;
     
     // Draw heart shape
     context.beginPath();
@@ -160,7 +167,7 @@ class AffirmationCard {
    * Draw the affirmation message (when revealed)
    */
   drawMessage() {
-    const { context, x, y, width, height, message } = this;
+    const { context, width, height, message } = this;
     
     // Calculate font size proportional to card dimensions
     const fontSize = Math.max(12, Math.min(width * 0.07, height * 0.05, 18));
@@ -205,10 +212,10 @@ class AffirmationCard {
     
     // Draw each line of text, centered in the card
     const totalTextHeight = lines.length * lineHeight;
-    const startY = y + (height - totalTextHeight) / 2;
+    const startY = (height - totalTextHeight) / 2;
     
     lines.forEach((line, index) => {
-      context.fillText(line.trim(), x + width/2, startY + index * lineHeight);
+      context.fillText(line.trim(), width/2, startY + index * lineHeight);
     });
   }
   
@@ -216,15 +223,15 @@ class AffirmationCard {
    * Draw the price tag at the bottom of the card
    */
   drawPriceTag() {
-    const { context, x, y, width, height, price } = this;
+    const { context, width, height, price } = this;
     
     // Calculate tag dimensions based on card size and price digits
     const priceDigits = price.toString().length;
     const baseTagWidth = width * this.layoutRatios.tagWidthRatio;
     const tagWidth = Math.min(baseTagWidth, Math.max(width * 0.6, baseTagWidth + (priceDigits * width * 0.03)));
     const tagHeight = height * this.layoutRatios.tagHeightRatio;
-    const tagX = x + (width - tagWidth) / 2;
-    const tagY = y + height - tagHeight - (height * this.layoutRatios.tagBottomMargin);
+    const tagX = (width - tagWidth) / 2;
+    const tagY = height - tagHeight - (height * this.layoutRatios.tagBottomMargin);
     
     // Add drop shadow for depth
     context.save();
@@ -308,11 +315,29 @@ class AffirmationCard {
    * @returns {boolean} True if point is inside
    */
   contains(pointX, pointY) {
+    // Calculate the transformed card boundaries based on scale
+    const centerX = this.x + this.width/2;
+    const centerY = this.y + this.height/2;
+    
+    // Adjust scale based on hover/selection
+    let effectiveScale = this.scale;
+    if (this.isSelected) {
+      effectiveScale *= 1.1;
+    } else if (this.isHovered) {
+      effectiveScale *= this.hoverScale;
+    }
+    
+    // Calculate actual bounds with scaling
+    const scaledWidth = this.width * effectiveScale;
+    const scaledHeight = this.height * effectiveScale;
+    const scaledX = centerX - scaledWidth/2;
+    const scaledY = centerY - scaledHeight/2;
+    
     return (
-      pointX >= this.x &&
-      pointX <= this.x + this.width &&
-      pointY >= this.y &&
-      pointY <= this.y + this.height
+      pointX >= scaledX &&
+      pointX <= scaledX + scaledWidth &&
+      pointY >= scaledY &&
+      pointY <= scaledY + scaledHeight
     );
   }
   

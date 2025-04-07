@@ -1,6 +1,6 @@
 /**
  * ShopCardDisplay.js - Manages the card collection in the shop
- * Improved with empty state handling and card management
+ * Enhanced with improved responsive positioning and scaling
  */
 import AffirmationCard from '../models/AffirmationCard.js';
 import ShopUiRenderer from '../utils/ShopUiRenderer.js';
@@ -28,6 +28,24 @@ class ShopCardDisplay {
     
     // Empty state flag
     this.isEmpty = false;
+    
+    // Window resize handler
+    this.handleResizeDebounced = this.debounce(this.handleResize.bind(this), 100);
+    window.addEventListener('resize', this.handleResizeDebounced);
+  }
+  
+  /**
+   * Create a debounced function to avoid excessive updates
+   * @param {Function} func - Function to debounce
+   * @param {number} delay - Delay in milliseconds
+   * @returns {Function} Debounced function
+   */
+  debounce(func, delay) {
+    let timeoutId;
+    return function(...args) {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => func.apply(this, args), delay);
+    };
   }
   
   /**
@@ -91,15 +109,22 @@ class ShopCardDisplay {
   updateCardPositions() {
     if (this.isEmpty || this.cards.length === 0) return;
     
+    // Get positions from layout manager - includes scaling info
     const positions = this.layoutManager.getCardPositions(this.cards.length);
     
     // Apply positions to cards
     this.cards.forEach((card, index) => {
       if (index < positions.length) {
+        // Update card position
         card.x = positions[index].x;
         card.y = positions[index].y;
         card.targetX = positions[index].x;
         card.targetY = positions[index].y;
+        
+        // Apply scaling if provided by layout manager
+        if (positions[index].scale !== undefined) {
+          card.scale = positions[index].scale;
+        }
       }
     });
   }
@@ -221,6 +246,11 @@ class ShopCardDisplay {
     // Center the selected card
     const centerPosition = this.layoutManager.getSelectedCardPosition();
     this.selectedCard.moveTo(centerPosition.x, centerPosition.y);
+    
+    // Reset scale to 1 for the selected card
+    if (this.selectedCard.scale !== 1) {
+      this.selectedCard.scale = 1;
+    }
   }
   
   /**
@@ -290,10 +320,12 @@ class ShopCardDisplay {
    * Handle resize events
    */
   handleResize() {
-    if (this.isEmpty) return;
+    // Make sure dimensions are up to date
+    this.layoutManager.updateLayout();
     
     // Update card dimensions
     const cardDimensions = this.layoutManager.getCardDimensions();
+    
     this.cards.forEach(card => {
       card.width = cardDimensions.width;
       card.height = cardDimensions.height;
@@ -303,6 +335,7 @@ class ShopCardDisplay {
     if (this.selectedCard) {
       const centerPosition = this.layoutManager.getSelectedCardPosition();
       this.selectedCard.moveTo(centerPosition.x, centerPosition.y);
+      this.selectedCard.scale = 1; // No scaling for selected card
     } else {
       // Otherwise update all card positions
       this.updateCardPositions();
@@ -376,6 +409,14 @@ class ShopCardDisplay {
     context.fillText("All affirmation cards have been collected!", centerX, centerY - 20);
     context.font = "16px Arial";
     context.fillText("Come back later for more cards.", centerX, centerY + 20);
+  }
+  
+  /**
+   * Clean up event listeners
+   */
+  cleanup() {
+    // Remove resize listener
+    window.removeEventListener('resize', this.handleResizeDebounced);
   }
 }
 

@@ -1,6 +1,6 @@
 /**
  * ShopMenu.js - Core coordinator for the shop interface
- * Improved version with card refreshing and empty state handling
+ * Enhanced with improved resize handling and responsive layout
  */
 import ShopCardDisplay from '../ui/ShopCardDisplay.js';
 import ShopHeader from '../ui/ShopHeader.js';
@@ -24,6 +24,10 @@ class ShopMenu {
     this.canvas = canvas;
     this.currentPrice = currentPrice;
     
+    // Track original canvas dimensions for resize detection
+    this.originalWidth = canvas.width;
+    this.originalHeight = canvas.height;
+    
     // State flags
     this.isOpen = false;
     this.showingPurchaseUI = false;
@@ -42,6 +46,11 @@ class ShopMenu {
     
     // Initialize with content
     this.updateCards(messages, currentPrice);
+    
+    // Set up resize handling with debouncing
+    this.resizeTimeout = null;
+    this.resizeHandler = this.handleResize.bind(this);
+    window.addEventListener('resize', this.resizeHandler);
   }
   
   /**
@@ -105,6 +114,11 @@ class ShopMenu {
       // Update layout for current canvas size
       this.layoutManager.updateLayout();
       
+      // Ensure components are positioned correctly
+      this.header.handleResize();
+      this.cardDisplay.handleResize();
+      this.closeButton.handleResize();
+      
       // Emit shop open event
       GameEvents.emit(SHOP_EVENTS.OPEN, {
         time: Date.now(),
@@ -132,14 +146,34 @@ class ShopMenu {
    * Handle window resize
    */
   handleResize() {
-    // Update the layout manager
-    this.layoutManager.updateLayout();
+    // Check if canvas dimensions have actually changed
+    if (this.canvas.width === this.originalWidth && 
+        this.canvas.height === this.originalHeight) {
+      return;
+    }
     
-    // Notify components about resize
-    this.header.handleResize();
-    this.cardDisplay.handleResize();
-    this.purchaseButton.handleResize();
-    this.closeButton.handleResize();
+    // Update stored dimensions
+    this.originalWidth = this.canvas.width;
+    this.originalHeight = this.canvas.height;
+    
+    // Clear any existing timeout
+    if (this.resizeTimeout) {
+      clearTimeout(this.resizeTimeout);
+    }
+    
+    // Set a debounce timer to avoid excessive updates
+    this.resizeTimeout = setTimeout(() => {
+      // Update the layout manager
+      this.layoutManager.updateLayout();
+      
+      // Notify components about resize
+      this.header.handleResize();
+      this.cardDisplay.handleResize();
+      this.purchaseButton.handleResize();
+      this.closeButton.handleResize();
+      
+      this.resizeTimeout = null;
+    }, 150); // 150ms debounce
   }
   
   /**
@@ -222,7 +256,8 @@ class ShopMenu {
       // Select the card in the card display
       this.cardDisplay.selectCard(cardIndex);
       
-      // Update the purchase button
+      // Update the purchase button with current layout
+      this.purchaseButton.handleResize();
       this.purchaseButton.setPrice(price);
       this.purchaseButton.show();
       
@@ -299,6 +334,12 @@ class ShopMenu {
   update() {
     if (!this.isOpen && !this.animator.isAnimating()) return;
     
+    // Check for canvas size changes
+    if (this.canvas.width !== this.originalWidth || 
+        this.canvas.height !== this.originalHeight) {
+      this.handleResize();
+    }
+    
     // Update animator
     this.animator.update();
     
@@ -349,6 +390,19 @@ class ShopMenu {
     // Draw overlay
     context.fillStyle = `rgba(0, 0, 0, ${alpha})`;
     context.fillRect(0, 0, canvas.width, canvas.height);
+  }
+  
+  /**
+   * Clean up resources
+   */
+  cleanup() {
+    // Remove resize event listener
+    window.removeEventListener('resize', this.resizeHandler);
+    
+    // Clean up components
+    if (this.cardDisplay && this.cardDisplay.cleanup) {
+      this.cardDisplay.cleanup();
+    }
   }
 }
 
