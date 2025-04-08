@@ -17,6 +17,7 @@ class CollectibleManager {
     this.canvas = canvas;
     this.collectibles = [];
     this.collected = 0;
+    this.hasInitialized = false; // Flag to track if we've initialized once
     
     // Reference width and height for consistent positioning
     this.referenceWidth = 1920;
@@ -72,7 +73,11 @@ class CollectibleManager {
     
     // Listen for game start to initialize collectibles
     GameEvents.on(GAME_EVENTS.START, () => {
-      this.initializeCollectibles();
+      // Only initialize if we haven't already or have no collectibles
+      if (!this.hasInitialized || this.collectibles.length === 0) {
+        this.initializeCollectibles();
+        this.hasInitialized = true;
+      }
     });
     
     // Listen for game resize to adjust collectible positions
@@ -175,6 +180,9 @@ class CollectibleManager {
     const scaleFactor = this.getScaleFactor();
     const y = (minY + Math.random() * (maxY - minY)) * scaleFactor;
     
+    // Store relative Y for consistent positioning on resize
+    const relativeY = y / this.canvas.height;
+    
     // Determine collectible type based on distribution
     const typeRoll = Math.random();
     let type = 'redtulip';
@@ -202,6 +210,9 @@ class CollectibleManager {
       type,
       this.valueMap[type]
     );
+    
+    // Store the relative position for proper resizing
+    collectible.relativeY = relativeY;
     
     this.collectibles.push(collectible);
     
@@ -313,9 +324,13 @@ class CollectibleManager {
         collectible.size = 40 * scaleFactor;
       }
       
-      // Adjust Y position to maintain relative position
-      const relativeY = collectible.y / (this.canvas.height * this.getScaleFactor());
-      collectible.y = relativeY * this.canvas.height * scaleFactor;
+      // Use stored relative Y position to maintain consistent vertical positioning
+      if (collectible.relativeY !== undefined) {
+        collectible.y = collectible.relativeY * this.canvas.height;
+      } else {
+        // If no relative Y stored, calculate and store it now
+        collectible.relativeY = collectible.y / this.canvas.height;
+      }
     });
   }
   
@@ -369,6 +384,7 @@ class CollectibleManager {
     this.collectibles = [];
     this.spawnTimer = 0;
     this.spawnInterval = 120;
+    this.hasInitialized = false; // Reset initialization flag to allow reinitialization
     
     if (!preserveCount) {
       // Only reset the count if preserveCount is false
