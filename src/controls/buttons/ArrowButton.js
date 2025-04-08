@@ -14,8 +14,8 @@ export default class ArrowButton extends BaseButton {
    * @param {string} direction - Direction ('left' or 'right')
    */
   constructor(x = 0, y = 0, width = 50, height = 50, direction = 'right') {
-    // Use a pastel purple color theme consistent with other UI elements
-    super(x, y, width, height, "#E3D1F4", "#D1B9E3", "");
+    // Use much brighter colors for better visibility
+    super(x, y, width, height, "#FF9AA2", "#FF7E86", "");
     
     // Store direction for rendering
     this.direction = direction; // 'left' or 'right'
@@ -38,6 +38,10 @@ export default class ArrowButton extends BaseButton {
    * @returns {string} Current button color
    */
   getCurrentColor() {
+    if (this.isDisabled) {
+      return "#A0A0A0"; // Gray for disabled state
+    }
+    
     if (this.isPressed) {
       // Darken normal color when pressed
       return this.darkenColor(this.color, 30);

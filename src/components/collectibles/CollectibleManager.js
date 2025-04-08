@@ -1,6 +1,7 @@
 /**
  * CollectibleManager.js - Manages all collectible items in the game
  * Modified to provide consistent positioning regardless of window size
+ * With height adjustment based on collectible value and improved collision detection
  */
 import Collectible from './Collectible.js';
 import GameEvents from '../../events/GameEvents.js';
@@ -23,6 +24,10 @@ class CollectibleManager {
     this.referenceWidth = 1920;
     this.referenceHeight = 1080;
     
+    // Character height references (as percentages of canvas height)
+    this.characterHeightNormal = 0.5; // Character's head at normal standing position
+    this.characterHeightJumping = 0.3; // Character's head at peak jump position
+    
     this.typeDistribution = {
       redtulip: 0.7,  // 70% chance of spawning a red tulip (common)
       pinktulip: 0.2,  // 20% chance of spawning a pink tulip (uncommon)
@@ -33,6 +38,14 @@ class CollectibleManager {
       pinktulip: 5,  // Pink tulip is worth 5 points
       goldentulip: 10  // Golden tulip is worth 10 points
     };
+    
+    // Define height ranges for each collectible type
+    this.heightRanges = {
+      redtulip: { min: 0.48, max: 0.55 },     // Mostly ground level, some requiring small jumps
+      pinktulip: { min: 0.35, max: 0.48 },    // Mix of ground level and jump height
+      goldentulip: { min: 0.28, max: 0.35 }   // Always requiring a jump to collect
+    };
+    
     this.spawnTimer = 0;
     this.spawnInterval = 120; // frames between spawns (about 2 seconds at 60fps)
     
@@ -93,10 +106,12 @@ class CollectibleManager {
     // Clear any existing collectibles
     this.collectibles = [];
     
-    // Add initial collectibles
-    for (let i = 0; i < 5; i++) {
-      this.spawnRandomCollectible();
-    }
+    // Add initial collectibles with varied positions
+    this.spawnRandomCollectible(null, 'redtulip'); // Common red tulip
+    this.spawnRandomCollectible(null, 'redtulip'); // Another red tulip
+    this.spawnRandomCollectible(null, 'pinktulip'); // Medium value pink tulip
+    this.spawnRandomCollectible(null, 'pinktulip'); // Another pink tulip
+    this.spawnRandomCollectible(null, 'goldentulip'); // Rare golden tulip (requires jump)
     
     // Emit initial count event
     this.emitCountUpdate();
@@ -152,8 +167,11 @@ class CollectibleManager {
     
     // Spawn new collectibles periodically
     if (this.spawnTimer >= this.spawnInterval) {
+      // Determine tulip type based on distribution with a weighted random
+      let type = this.getRandomTulipType();
+      
       // Spawn ahead of player with constant distance
-      this.spawnRandomCollectible(worldOffset + this.referenceWidth);
+      this.spawnRandomCollectible(worldOffset + this.referenceWidth, type);
       this.spawnTimer = 0;
       
       // Gradually reduce spawn interval as game progresses (min 60 frames)
@@ -165,25 +183,10 @@ class CollectibleManager {
   }
   
   /**
-   * Spawn a random collectible
-   * @param {number} xPos - X position to spawn at (defaults to random position ahead)
+   * Get a random tulip type based on the distribution
+   * @returns {string} The tulip type
    */
-  spawnRandomCollectible(xPos = null) {
-    // Use reference dimensions for consistency
-    const minY = this.referenceHeight * 0.3;
-    const maxY = this.referenceHeight * 0.6;
-    
-    // Determine spawn position with fixed distance ahead
-    const x = xPos !== null ? xPos : Math.random() * this.referenceWidth * 1.5 + this.referenceWidth;
-    
-    // Use scaled Y position
-    const scaleFactor = this.getScaleFactor();
-    const y = (minY + Math.random() * (maxY - minY)) * scaleFactor;
-    
-    // Store relative Y for consistent positioning on resize
-    const relativeY = y / this.canvas.height;
-    
-    // Determine collectible type based on distribution
+  getRandomTulipType() {
     const typeRoll = Math.random();
     let type = 'redtulip';
     let cumulativeProbability = 0;
@@ -196,10 +199,50 @@ class CollectibleManager {
       }
     }
     
+    return type;
+  }
+  
+  /**
+   * Spawn a random collectible
+   * @param {number} xPos - X position to spawn at (defaults to random position ahead)
+   * @param {string} type - Specific tulip type to spawn (optional)
+   */
+  spawnRandomCollectible(xPos = null, type = null) {
+    // If no type specified, get a random one based on distribution
+    if (!type) {
+      type = this.getRandomTulipType();
+    }
+    
+    // Determine position with fixed distance ahead
+    const x = xPos !== null ? xPos : Math.random() * this.referenceWidth * 1.5 + this.referenceWidth;
+    
+    // Get the height range for this tulip type
+    const heightRange = this.heightRanges[type];
+    
+    // Calculate Y position based on tulip type's height range
+    const minHeightPercent = heightRange.min;
+    const maxHeightPercent = heightRange.max;
+    
+    // Get a random position within the appropriate height range
+    const heightPercent = minHeightPercent + Math.random() * (maxHeightPercent - minHeightPercent);
+    
+    // Convert percentage to actual canvas Y position
+    const y = this.canvas.height * heightPercent;
+    
+    // Store relative Y for consistent positioning on resize
+    const relativeY = heightPercent;
+    
     // INCREASED SIZE - Determine size based on type and scaled for current screen
-    let size = 40 * scaleFactor; // Default size
-    if (type === 'pinktulip') size = 36 * scaleFactor; // Doubled from 18
-    else if (type === 'goldentulip') size = 40 * scaleFactor; // Doubled from 20
+    const scaleFactor = this.getScaleFactor();
+    let size;
+    
+    if (type === 'redtulip') {
+      size = 40 * scaleFactor;
+    } else if (type === 'pinktulip') {
+      size = 36 * scaleFactor;
+    } else if (type === 'goldentulip') {
+      size = 40 * scaleFactor;
+    }
     
     // Create and add the collectible
     const collectible = new Collectible(
@@ -213,6 +256,7 @@ class CollectibleManager {
     
     // Store the relative position for proper resizing
     collectible.relativeY = relativeY;
+    collectible.type = type; // Ensure type is stored on the collectible
     
     this.collectibles.push(collectible);
     
@@ -256,10 +300,44 @@ class CollectibleManager {
     // Scale the collision radius by the current scale factor
     const scaledRadius = characterRadius * this.getScaleFactor();
     
-    // Check each active collectible for collision
+    // Get character dimensions - these are estimates based on stick figure proportions
+    const headRadius = scaledRadius;
+    const characterHeight = headRadius * 5; // Total height including head, body, legs
+    
+    // Create multiple collision points to check for the character's full height
+    const collisionPoints = [
+      { x: adjustedCharacterX, y: characterY }, // Head center
+      { x: adjustedCharacterX, y: characterY + headRadius }, // Bottom of head/top of body
+      { x: adjustedCharacterX, y: characterY + headRadius * 2 }, // Middle of body
+      { x: adjustedCharacterX, y: characterY + headRadius * 3 }, // Bottom of body
+      { x: adjustedCharacterX, y: characterY + headRadius * 5 }  // Bottom of legs
+    ];
+    
+    // Check each active collectible for collision with any part of the character
     this.collectibles.forEach(collectible => {
-      if (collectible.active && collectible.checkCollision(adjustedCharacterX, characterY, scaledRadius)) {
-        // Handle collection
+      if (!collectible.active) return;
+      
+      // Check if any of the character points collide with this collectible
+      let collision = false;
+      
+      for (const point of collisionPoints) {
+        // Use a slightly smaller radius for body points compared to the head
+        const pointRadius = point.y === characterY ? scaledRadius : scaledRadius * 0.7;
+        
+        // Calculate distance between this character point and the collectible
+        const dx = collectible.x - point.x;
+        const dy = collectible.y - point.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        // Check if distance is less than sum of radii (collision occurred)
+        if (distance < collectible.size + pointRadius) {
+          collision = true;
+          break;
+        }
+      }
+      
+      // If collision detected, handle collection
+      if (collision) {
         this.collectItem(collectible);
       }
     });

@@ -525,7 +525,7 @@ class ShopManager {
         // Update button states based on available cards
         this.updateShopButtonState();
         this.updateCollectionButtonState();
-      }, 2000); // Wait 2 seconds after purchase to refresh cards
+      }, 5000); // Wait 2 seconds after purchase to refresh cards
     }
     
     // Emit purchase success event

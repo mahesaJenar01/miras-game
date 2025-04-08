@@ -303,7 +303,7 @@ class ShopMenu {
     setTimeout(() => {
       this.purchaseButton.setState('normal');
       this.showingPurchaseUI = false;
-    }, 750);
+    }, 5000);
   }
   
   /**
