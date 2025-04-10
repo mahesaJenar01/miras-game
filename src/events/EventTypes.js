@@ -19,7 +19,12 @@ export const GAME_EVENTS = {
   RESIZE: 'game:resize',
   WORLD_UPDATE: 'game:world_update',
   SCORE_CHANGE: 'game:score_change',
-  LEVEL_COMPLETE: 'game:level_complete'
+  LEVEL_COMPLETE: 'game:level_complete',
+  
+  // Game over and restart events
+  GAME_OVER: 'game:game_over',
+  RESTART: 'game:restart',
+  RESTART_COMPLETE: 'game:restart_complete'
 };
 
 /**

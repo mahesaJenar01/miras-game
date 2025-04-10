@@ -93,6 +93,8 @@ class GameEventEmitter extends EventEmitter {
       return false;
     }
     
+    // Check if the event type is valid, but still emit even if it's not registered
+    // This prevents errors when adding new event types
     if (!Object.values(this.types.GAME_EVENTS).includes(eventType)) {
       console.warn(`[GameEvents] '${eventType}' is not a registered game event type`);
     }

@@ -64,24 +64,40 @@ export default class ButtonSystem {
    */
   registerEventListeners() {
     // Listen for button press events
-    GameEvents.on(INPUT_EVENTS.BUTTON_PRESS, (data) => {
-      const { buttonKey } = data;
-      
-      // Add button to active set
-      this.activeButtons.add(buttonKey);
-      
-      // Trigger the appropriate action based on the button
-      if (buttonKey === 'move') {
-        this.handleMoveButtonPress();
-      } else if (buttonKey === 'jump') {
-        this.handleJumpButtonPress();
-      } else if (buttonKey === 'attack') {
-        this.handleAttackButtonPress();
-      } else if (buttonKey === 'restart') {
-        // Emit game restart event
-        GameEvents.emitGame(GAME_EVENTS.RESTART, {
-          time: Date.now()
-        });
+        GameEvents.on(INPUT_EVENTS.BUTTON_PRESS, (data) => {
+          const { buttonKey } = data;
+          
+          // Add button to active set
+          this.activeButtons.add(buttonKey);
+          
+          // Trigger the appropriate action based on the button
+          if (buttonKey === 'move') {
+            this.handleMoveButtonPress();
+          } else if (buttonKey === 'jump') {
+            this.handleJumpButtonPress();
+          } else if (buttonKey === 'attack') {
+            this.handleAttackButtonPress();
+          } else if (buttonKey === 'restart') {
+            // Use a try-catch to ensure restart is handled properly
+      try {
+        // Explicitly set the restart button to pressed state for visual feedback
+        this.buttons.restart.setPressed(true);
+        
+        // Add a small delay before emitting the restart event
+        // This helps prevent event recursion issues
+        setTimeout(() => {
+          // Emit game restart event
+          GameEvents.emitGame(GAME_EVENTS.RESTART, {
+            time: Date.now()
+          });
+          
+          // Release the button after the event is processed
+          this.buttons.restart.setPressed(false);
+        }, 100);
+      } catch (error) {
+        // Make sure to release the button even if there's an error
+        this.buttons.restart.setPressed(false);
+      }
       }
     });
     
@@ -150,13 +166,11 @@ export default class ButtonSystem {
     
     // Listen for game over events
     GameEvents.on(GAME_EVENTS.GAME_OVER, (data) => {
-      console.log("[ButtonSystem] Game over event received");
       this.handleGameOver(true);
     });
     
     // Listen for restart events
     GameEvents.on(GAME_EVENTS.RESTART_COMPLETE, () => {
-      console.log("[ButtonSystem] Restart complete event received");
       this.handleGameOver(false);
     });
   }
@@ -199,10 +213,7 @@ export default class ButtonSystem {
         }
       }
     });
-    
-    // Log state for debugging
-    console.log(`[ButtonSystem] Game over state: ${isGameOver}, buttons disabled: ${isGameOver}`);
-  }
+  }  
   
   /**
    * Toggle visibility of contextual buttons

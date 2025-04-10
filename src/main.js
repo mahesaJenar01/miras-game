@@ -107,7 +107,7 @@ class Game {
       this.handleRestart();
     });    
   }
-  
+
   /**
    * Handle game over state
    * @param {number} checkpointOffset - World offset to restart from
@@ -143,38 +143,52 @@ class Game {
     if (this._isRestartingFromEvent) return;
     this._isRestartingFromEvent = true;
     
-    // Get checkpoint from health manager
-    const checkpointOffset = this.healthManager ? this.healthManager.lastCheckpoint : 0;
-    
-    // Reset world to checkpoint
-    this.worldOffset = checkpointOffset;
-    
-    // Emit world update event
-    GameEvents.emitGame(GAME_EVENTS.WORLD_UPDATE, {
-      worldOffset: this.worldOffset,
-      change: 0
-    });
-    
-    // Reset enemy manager to place enemies ahead
-    if (this.enemyManager) {
-      this.enemyManager.reset();
-      this.enemyManager.initializeEnemies();
+    try {
+      // Get checkpoint from health manager
+      const checkpointOffset = this.healthManager ? this.healthManager.lastCheckpoint : 0;
+      
+      // Reset world to checkpoint
+      this.worldOffset = checkpointOffset;
+      
+      // Emit world update event
+      GameEvents.emitGame(GAME_EVENTS.WORLD_UPDATE, {
+        worldOffset: this.worldOffset,
+        change: 0
+      });
+      
+      // Reset enemy manager to place enemies ahead
+      if (this.enemyManager) {
+        this.enemyManager.reset();
+        this.enemyManager.initializeEnemies();
+      }
+      
+      // Reset collectible manager
+      if (this.collectibleManager) {
+        this.collectibleManager.reset(true); // preserveCount=true
+      }
+      
+      // Directly update health manager state
+      if (this.healthManager) {
+        this.healthManager.currentHealth = this.healthManager.maxHealth;
+        this.healthManager.isAlive = true;
+        this.healthManager.gameOverVisible = false;
+        this.healthManager.damageAnimationTimer = 0;
+      }
+      
+      // Enable buttons via button system
+      if (this.buttonSystem) {
+        this.buttonSystem.handleGameOver(false);
+      }
+      
+      // Emit restart complete event
+      GameEvents.emitGame(GAME_EVENTS.RESTART_COMPLETE, {
+        worldOffset: checkpointOffset
+      });
+    } catch (error) {
+      console.error("Error during game restart:", error);
+    } finally {
+      this._isRestartingFromEvent = false;
     }
-    
-    // Reset collectible manager
-    if (this.collectibleManager) {
-      this.collectibleManager.reset(true); // preserveCount=true
-    }
-    
-    // Directly update health manager state instead of emitting events
-    if (this.healthManager) {
-      this.healthManager.currentHealth = this.healthManager.maxHealth;
-      this.healthManager.isAlive = true;
-      this.healthManager.gameOverVisible = false;
-      this.healthManager.damageAnimationTimer = 0;
-    }
-    
-    this._isRestartingFromEvent = false;
   }
 
   /**

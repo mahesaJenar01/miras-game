@@ -132,7 +132,6 @@ class CollectibleManager {
         // Validate the count is a positive number
         if (!isNaN(count) && count >= 0) {
           this.collected = count;
-          console.log(`Loaded ${count} flowers from localStorage`);
         }
       }
     } catch (e) {
