@@ -10,6 +10,8 @@ import { GAME_EVENTS, CHARACTER_EVENTS } from './events/EventTypes.js';
 import CollectibleManager from './components/collectibles/CollectibleManager.js';
 import CollectibleDisplay from './components/collectibles/CollectibleDisplay.js';
 import ShopManager from './components/shop/ShopManager.js';
+import EnemyManager from './components/enemies/EnemyManager.js';
+import HitEffectSystem from './components/enemies/HitEffectSystem.js';
 
 class Game {
   /**
@@ -50,6 +52,12 @@ class Game {
     // Create the shop manager
     this.shopManager = new ShopManager(context, canvas);
     
+    // Create the enemy manager
+  this.enemyManager = new EnemyManager(context, canvas);
+  
+  // Create the hit effect system for visual feedback
+  this.hitEffectSystem = new HitEffectSystem(context);
+
     // Register event listeners
     this.registerEventListeners();
     
@@ -175,13 +183,13 @@ class Game {
   animate = () => {
     this.animationFrameId = requestAnimationFrame(this.animate);
     this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-  
+
     const { scene, stickfigure } = this.components;
-  
+
     // Update and draw the scene with current world offset
     scene.update(this.worldOffset);
     scene.draw(this.worldOffset);
-  
+
     // Update stickfigure
     if (stickfigure.update) {
       stickfigure.update();
@@ -195,10 +203,32 @@ class Game {
     // Draw the stickfigure
     stickfigure.draw();
     
+    // Update and draw enemies (before attacker so attacker appears in front)
+    if (this.enemyManager) {
+      this.enemyManager.updateEnemies(this.worldOffset);
+      this.enemyManager.draw(this.worldOffset);
+    }    
+    
     // Update and draw the attacker (in front of the main character)
     if (this.attacker) {
       this.attacker.update();
+      
+      // Get attack hitbox - pass worldOffset for proper positioning
+      const attackHitbox = this.attacker.getAttackHitbox(this.worldOffset);
+      
+      // Check for hits if attacker is attacking
+      if (attackHitbox && this.enemyManager) {
+        this.enemyManager.checkAttackHits(attackHitbox, this.attacker);
+      }
+      
+      // Draw the attacker
       this.attacker.draw();
+    }
+    
+    // Update and draw hit effects (on top of characters and enemies)
+    if (this.hitEffectSystem) {
+      this.hitEffectSystem.update();
+      this.hitEffectSystem.draw();
     }
     
     // Update and draw collectibles
@@ -206,7 +236,7 @@ class Game {
       this.collectibleManager.update();
       this.collectibleManager.draw(this.worldOffset);
     }
-  
+
     // Update world offset using fixed speed if the stickfigure is walking
     if (this.isWalking) {
       const prevOffset = this.worldOffset;
@@ -222,7 +252,7 @@ class Game {
         });
       }
     }
-  
+
     // Draw buttons using the button system
     this.buttonSystem.draw();
     
@@ -237,7 +267,7 @@ class Game {
       this.shopManager.update();
       this.shopManager.draw();
     }
-  }  
+  }
 
   getScaleFactor() {
     // Calculate scale factor between current size and reference size
@@ -318,9 +348,14 @@ class Game {
     // Update button positions
     this.buttonSystem.updateButtonPositions();
     
+    // Reset enemy manager to initialize with new enemies
+    if (this.enemyManager) {
+      this.enemyManager.reset();
+    }
+    
     // Start the game again
     this.start();
-  }
+  }  
   
   /**
    * Clean up resources when the game is destroyed
@@ -353,6 +388,11 @@ class Game {
       this.shopManager.cleanup();
     }
     
+    // Clean up enemy manager
+    if (this.enemyManager) {
+      this.enemyManager.reset();
+    }  
+  
     // Clean up debug UI if it exists
     const debugPanel = document.getElementById('debug-panel');
     if (debugPanel) {

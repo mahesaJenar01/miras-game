@@ -1,7 +1,7 @@
 /**
  * EventTypes.js - Constants for all event types
  * Categorized by domain to ensure consistency and prevent typos
- * Updated to include Collection events
+ * Updated to include Enemy events
  */
 
 /**
@@ -161,4 +161,27 @@ export const COLLECTION_EVENTS = {
   CLOSE: 'collection:close',
   PAGE_CHANGE: 'collection:page_change',
   CARD_VIEW: 'collection:card_view'
+};
+
+/**
+ * Enemy-related events
+ * Events for enemy spawning, attacks, and animations
+ */
+export const ENEMY_EVENTS = {
+  // Enemy lifecycle
+  ENEMY_SPAWN: 'enemy:spawn',
+  ENEMY_HIT: 'enemy:hit',
+  ENEMY_DEFEATED: 'enemy:defeated',
+  
+  // Enemy animation events
+  ENEMY_ANIMATION: 'enemy:animation_frame',
+  ENEMY_SPECIAL_ANIMATION: 'enemy:special_animation',
+  
+  // Enemy attack events
+  ENEMY_ATTACK_START: 'enemy:attack_start',
+  ENEMY_ATTACK_HIT: 'enemy:attack_hit',
+  ENEMY_ATTACK_END: 'enemy:attack_end',
+  
+  // Enemy count updates
+  ENEMY_COUNT_UPDATE: 'enemy:count_update'
 };

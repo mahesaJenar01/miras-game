@@ -287,23 +287,106 @@ class Attacker extends Character {
   
   /**
    * Get the attack hitbox for collision detection
+   * Fixed to include worldOffset for proper hit detection
+   * @param {number} worldOffset - Current world offset
    * @returns {Object|null} Hitbox object or null if not attacking
    */
-  getAttackHitbox() {
+  getAttackHitbox(worldOffset) {
     if (!this.isAttacking) return null;
     
     // Only create hitbox during active attack phase
     const animProgress = this.animator.attackFrame / this.animator.attackDuration;
     if (animProgress < 0.2 || animProgress > 0.7) return null;
     
-    return {
-      x: this.x,
-      y: this.y,
-      width: this.attackRange,
-      height: this.config.bodyLength * 2
+    // Calculate attack range based on character size
+    const attackRange = this.config.radius * 15; // Make this large enough
+    
+    // Calculate proper hitbox position in world coordinates
+    // Note: x and y should be in screen coordinates, not world coordinates
+    const hitbox = {
+      x: this.x + this.config.radius * 2, // Position to the right of the character
+      y: this.y - this.config.bodyLength, // Center vertically with character
+      width: attackRange,
+      height: this.config.bodyLength * 3, // Tall enough to hit different enemies
+      worldOffset: worldOffset, // Include worldOffset for EnemyManager
+      strength: 1.0 // Full strength
     };
+
+    return hitbox;
   }
   
+  /**
+   * Get the position of the sword tip for visual effects
+   * @returns {Object} Position {x, y} of sword tip
+   */
+  getSwordTipPosition() {
+    // Calculate based on animation frame
+    const animProgress = this.animator.attackFrame / this.animator.attackDuration;
+    const attackProgress = animProgress > 0.2 && animProgress < 0.7 ? (animProgress - 0.2) / 0.5 : (animProgress >= 0.7 ? 1 : 0);
+    
+    // Calculate sword angle based on attack progress
+    const swordAngle = Math.PI / 4 - (attackProgress * Math.PI / 2);
+    
+    // Calculate sword length
+    const swordLength = this.config.radius * 6;
+    
+    // Calculate sword tip position based on character position and sword angle
+    const handsPosition = this.y + this.config.radius + (this.config.bodyLength * this.config.handsRatio);
+    const armLength = this.config.handsLength * 1.2;
+    
+    // Calculate arm end position (where sword connects)
+    const armEndX = this.x + Math.cos(swordAngle) * armLength;
+    const armEndY = handsPosition + Math.sin(swordAngle) * armLength;
+    
+    // Calculate sword tip position
+    const swordTipX = armEndX + Math.cos(swordAngle) * swordLength;
+    const swordTipY = armEndY + Math.sin(swordAngle) * swordLength;
+    
+    return {
+      x: swordTipX,
+      y: swordTipY
+    };
+  }
+
+  /**
+   * Add this new method to create hit effects
+   * @param {Object} hitPosition - Position {x, y} where hit occurred
+   */
+  createHitEffect(hitPosition) {
+    // Use the particle system to create visual feedback
+    if (this.particleSystem) {
+      // Configure for sword hit effect
+      this.particleSystem.configure({
+        minSize: 2,
+        maxSize: 6,
+        minLife: 10,
+        maxLife: 20,
+        color: this.swordColor
+      });
+      
+      // Create a burst of particles at hit location
+      this.particleSystem.burst(
+        hitPosition.x,
+        hitPosition.y,
+        15, // Number of particles
+        {
+          color: this.swordColor,
+          minSize: 2,
+          maxSize: 6
+        }
+      );
+    }
+    
+    // Add glow effect at hit location
+    if (this.glowEffect) {
+      this.glowEffect.configure({
+        color: `rgba(255, 16, 240, 0.7)`,
+        radius: this.config.radius * 2,
+        intensity: 0.8
+      }).drawCircular(hitPosition.x, hitPosition.y);
+    }
+  }
+
   /**
    * Get cooldown percentage (for UI display)
    * @returns {number} Cooldown percentage (0-1)
