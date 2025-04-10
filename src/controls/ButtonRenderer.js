@@ -117,7 +117,14 @@ export default class ButtonRenderer {
             decoration.size,
             decorationColor || button.textColor
           );
-        }
+        } else if (decoration.type === 'restart') {
+          this.drawRestartIcon(
+            x + decoration.x,
+            y + decoration.y,
+            decoration.size,
+            decorationColor || button.textColor
+          );
+        }        
       });
     }
     
@@ -197,6 +204,47 @@ export default class ButtonRenderer {
     }
   }
   
+  /**
+   * Add this new method to the ButtonRenderer class:
+   */
+  /**
+   * Draw a restart circular arrow icon
+   * @param {number} x - Center X position
+   * @param {number} y - Center Y position
+   * @param {number} size - Icon size
+   * @param {string} color - Icon color
+   */
+  drawRestartIcon(x, y, size, color) {
+    const context = this.context;
+    
+    // Save current state
+    context.save();
+    
+    // Set line properties
+    context.strokeStyle = color;
+    context.lineWidth = size * 0.2;
+    context.lineCap = 'round';
+    
+    // Draw circular arrow
+    context.beginPath();
+    // Draw 3/4 of a circle starting from top
+    context.arc(x, y, size, -Math.PI/2, Math.PI, true);
+    context.stroke();
+    
+    // Draw arrowhead
+    const arrowSize = size * 0.3;
+    context.beginPath();
+    context.moveTo(x - size, y);
+    context.lineTo(x - size - arrowSize * 0.5, y - arrowSize);
+    context.lineTo(x - size + arrowSize, y);
+    context.closePath();
+    context.fillStyle = color;
+    context.fill();
+    
+    // Restore context state
+    context.restore();
+  }
+
   /**
    * Draw a decorative flower
    * @param {number} x - X coordinate

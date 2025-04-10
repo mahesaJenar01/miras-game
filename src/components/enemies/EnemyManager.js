@@ -53,7 +53,13 @@ class EnemyManager {
       tiger: 2,
       bird: 2
     };
-    
+
+    this.rewardAmounts = {
+      snake: 7,   // Snake gives 7 collectibles
+      tiger: 5,   // Tiger gives 5 collectibles
+      bird: 9     // Bird gives 9 collectibles
+    };  
+
     // Register event listeners
     this.registerEventListeners();
   }
@@ -280,13 +286,13 @@ class EnemyManager {
         this.removeOffscreenEnemies(worldOffset);
     }
   
-/**
- * Check if any enemies are hit by an attack
- * Fixed to ensure enemy hits are properly detected and processed
- * @param {Object} hitbox - Attack hitbox data
- * @param {Object} attacker - Attacker information
- */
-checkAttackHits(hitbox, attacker) {
+  /**
+   * Check if any enemies are hit by an attack
+   * Modified to add reward collectibles when enemies are defeated
+   * @param {Object} hitbox - Attack hitbox data
+   * @param {Object} attacker - Attacker information
+   */
+  checkAttackHits(hitbox, attacker) {
     // Safety check - ensure we have valid hitbox data
     if (!hitbox || typeof hitbox !== 'object') {
       console.warn('Invalid hitbox data provided to checkAttackHits');
@@ -321,6 +327,9 @@ checkAttackHits(hitbox, attacker) {
             this.activeEnemiesByType[enemy.type] = 0;
           }
           
+          // Add reward collectibles based on enemy type
+          this.addRewardCollectibles(enemy.type);
+          
           // Emit enemy defeated event
           GameEvents.emit(ENEMY_EVENTS.ENEMY_DEFEATED, {
             type: enemy.type,
@@ -337,6 +346,33 @@ checkAttackHits(hitbox, attacker) {
         hitCount,
         attacker
       });
+    }
+  }
+
+  /**
+   * Add reward collectibles when an enemy is defeated
+   * @param {string} enemyType - Type of enemy defeated
+   */
+  addRewardCollectibles(enemyType) {
+    // Get the reward amount for this enemy type
+    const rewardAmount = this.rewardAmounts[enemyType] || 0;
+    
+    // Skip if no reward
+    if (rewardAmount <= 0) return;
+    
+    // Access the collectible manager through game instance
+    const collectibleManager = window.game ? window.game.collectibleManager : null;
+    
+    if (collectibleManager) {
+      // Add the reward amount to the collected count
+      collectibleManager.collected += rewardAmount;
+      
+      // Save the updated flower count to localStorage
+      collectibleManager.saveFlowersCount();
+      
+      // Emit count update event
+      collectibleManager.emitCountUpdate();
+      
     }
   }
 

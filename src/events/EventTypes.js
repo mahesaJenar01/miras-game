@@ -47,7 +47,13 @@ export const CHARACTER_EVENTS = {
   // Animation events
   ANIMATION_START: 'character:animation_start',
   ANIMATION_FRAME: 'character:animation_frame',
-  ANIMATION_END: 'character:animation_end'
+  ANIMATION_END: 'character:animation_end',
+
+  GAME_OVER: 'game:game_over',
+  RESTART: 'game:restart',
+  RESTART_COMPLETE: 'game:restart_complete',
+
+  HEALTH_CHANGE: 'character:health_change',
 };
 
 /**

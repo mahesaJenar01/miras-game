@@ -12,6 +12,7 @@ import CollectibleDisplay from './components/collectibles/CollectibleDisplay.js'
 import ShopManager from './components/shop/ShopManager.js';
 import EnemyManager from './components/enemies/EnemyManager.js';
 import HitEffectSystem from './components/enemies/HitEffectSystem.js';
+import HealthManager from './components/character/HealthManager.js';
 
 class Game {
   /**
@@ -53,10 +54,13 @@ class Game {
     this.shopManager = new ShopManager(context, canvas);
     
     // Create the enemy manager
-  this.enemyManager = new EnemyManager(context, canvas);
+    this.enemyManager = new EnemyManager(context, canvas);
   
-  // Create the hit effect system for visual feedback
-  this.hitEffectSystem = new HitEffectSystem(context);
+    // Create the hit effect system for visual feedback
+    this.hitEffectSystem = new HitEffectSystem(context);
+
+    // Create the health manager
+    this.healthManager = new HealthManager(context, canvas);
 
     // Register event listeners
     this.registerEventListeners();
@@ -89,8 +93,72 @@ class Game {
         this.worldOffset = data.worldOffset;
       }
     });
+
+    GameEvents.on(GAME_EVENTS.GAME_OVER, (data) => {
+      if (data.worldOffset !== undefined) {
+        this.handleGameOver(data.worldOffset);
+      }
+    });
+    
+    // Listen for restart events
+    GameEvents.on(GAME_EVENTS.RESTART, () => {
+      this.handleRestart();
+    });    
   }
-  
+  /**
+   * Handle game over state
+   * @param {number} checkpointOffset - World offset to restart from
+   */
+  handleGameOver(checkpointOffset) {
+    // Stop walking
+    this.isWalking = false;
+    
+    // Update state
+    if (this.components.stickfigure) {
+      this.components.stickfigure.isWalking = false;
+    }
+    
+    // Emit stop event to ensure consistency
+    GameEvents.emitCharacter(CHARACTER_EVENTS.MOVE_STOP, {
+      direction: 'right'
+    });
+  }
+
+  /**
+   * Handle game restart
+   */
+  handleRestart() {
+    // Get checkpoint from health manager
+    const checkpointOffset = this.healthManager ? this.healthManager.lastCheckpoint : 0;
+    
+    // Reset world to checkpoint
+    this.worldOffset = checkpointOffset;
+    
+    // Emit world update event
+    GameEvents.emitGame(GAME_EVENTS.WORLD_UPDATE, {
+      worldOffset: this.worldOffset,
+      change: 0
+    });
+    
+    // Reset enemy manager to place enemies ahead
+    if (this.enemyManager) {
+      this.enemyManager.reset();
+      
+      // Initialize with enemies ahead of checkpoint
+      this.enemyManager.initializeEnemies();
+    }
+    
+    // Reset collectible manager
+    if (this.collectibleManager) {
+      this.collectibleManager.reset(true); // preserveCount=true
+    }
+    
+    // Emit restart complete event
+    GameEvents.emitGame(GAME_EVENTS.RESTART_COMPLETE, {
+      worldOffset: checkpointOffset
+    });
+  }
+
   /**
    * Initialize debug mode for the event system
    */
@@ -238,7 +306,7 @@ class Game {
     }
 
     // Update world offset using fixed speed if the stickfigure is walking
-    if (this.isWalking) {
+    if (this.isWalking && (!this.healthManager || this.healthManager.getAliveState())) {
       const prevOffset = this.worldOffset;
       
       // Use a constant pixel increment for consistent speed regardless of window size
@@ -251,7 +319,7 @@ class Game {
           change: this.gameSpeed
         });
       }
-    }
+    }    
 
     // Draw buttons using the button system
     this.buttonSystem.draw();
@@ -267,6 +335,12 @@ class Game {
       this.shopManager.update();
       this.shopManager.draw();
     }
+
+    // Update and draw health manager
+    if (this.healthManager) {
+      this.healthManager.update();
+      this.healthManager.draw();
+    }    
   }
 
   getScaleFactor() {

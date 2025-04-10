@@ -2,6 +2,7 @@
  * ButtonSystem - Central coordinator for all button-related functionality
  * Manages button creation, positioning, and actions using the event system
  * Updated to include collection button and navigation arrows
+ * Added support for restart button and game over state
  */
 import ButtonRenderer from './ButtonRenderer.js';
 import ButtonInputHandler from './ButtonInputHandler.js';
@@ -11,8 +12,9 @@ import AttackButton from './buttons/AttackButton.js';
 import ShopButton from './buttons/ShopButton.js';
 import CollectionButton from './buttons/CollectionButton.js';
 import ArrowButton from './buttons/ArrowButton.js';
+import RestartButton from './buttons/RestartButton.js';
 import GameEvents from '../events/GameEvents.js';
-import { INPUT_EVENTS, CHARACTER_EVENTS, UI_EVENTS } from '../events/EventTypes.js';
+import { INPUT_EVENTS, CHARACTER_EVENTS, UI_EVENTS, GAME_EVENTS } from '../events/EventTypes.js';
 
 export default class ButtonSystem {
   /**
@@ -75,6 +77,11 @@ export default class ButtonSystem {
         this.handleJumpButtonPress();
       } else if (buttonKey === 'attack') {
         this.handleAttackButtonPress();
+      } else if (buttonKey === 'restart') {
+        // Emit game restart event
+        GameEvents.emitGame(GAME_EVENTS.RESTART, {
+          time: Date.now()
+        });
       }
     });
     
@@ -125,6 +132,10 @@ export default class ButtonSystem {
         
         // Update button positions to maintain proper layout
         this.updateButtonPositions();
+      } else if (data.type === 'game_over') {
+        this.handleGameOver(!data.isAlive);
+      } else if (data.type === 'game_restart') {
+        this.handleGameOver(!data.isAlive);
       }
     });
     
@@ -135,6 +146,37 @@ export default class ButtonSystem {
     
     GameEvents.on('collection:close', () => {
       this.showContextualButtons(false);
+    });
+    
+    // Listen for game over events
+    GameEvents.on(GAME_EVENTS.GAME_OVER, () => {
+      this.handleGameOver(true);
+    });
+    
+    // Listen for restart events
+    GameEvents.on(GAME_EVENTS.RESTART_COMPLETE, () => {
+      this.handleGameOver(false);
+    });
+  }
+
+  /**
+   * Handle game over state
+   * @param {boolean} isGameOver - Whether the game is over
+   */
+  handleGameOver(isGameOver) {
+    // Show/hide restart button based on game over state
+    if (this.buttons.restart) {
+      this.buttons.restart.setVisible(isGameOver);
+    }
+    
+    // Disable/enable other buttons based on game state
+    Object.entries(this.buttons).forEach(([key, button]) => {
+      if (key !== 'restart') {
+        // If it has a disabled property, set it
+        if (button.isDisabled !== undefined) {
+          button.isDisabled = isGameOver;
+        }
+      }
     });
   }
   
@@ -200,7 +242,8 @@ export default class ButtonSystem {
       shop: new ShopButton(),
       collection: new CollectionButton(),
       leftArrow: new ArrowButton(0, 0, 50, 50, 'left'),
-      rightArrow: new ArrowButton(0, 0, 50, 50, 'right')
+      rightArrow: new ArrowButton(0, 0, 50, 50, 'right'),
+      restart: new RestartButton() // Add restart button
     };
   }
   
@@ -318,6 +361,22 @@ export default class ButtonSystem {
       arrowSize
     );
     
+    let restartBtnWidth= 0;
+    let restartBtnHeight= 0;
+    
+    // Position restart button at center of screen
+    if (this.buttons.restart) {
+      restartBtnWidth = Math.min(200, canvasWidth * 0.3);
+      restartBtnHeight = Math.min(60, canvasHeight * 0.08);
+      
+      this.buttons.restart.updatePosition(
+        (canvasWidth - restartBtnWidth) / 2,
+        dirtCenterY + canvasHeight * 0.1, // Below other buttons
+        restartBtnWidth,
+        restartBtnHeight
+      );
+    }
+    
     // Emit UI update event
     GameEvents.emitUI(UI_EVENTS.UPDATE, {
       type: 'button_positions',
@@ -328,7 +387,8 @@ export default class ButtonSystem {
         shop: { x: this.buttons.shop.x, y: this.buttons.shop.y, width: displayHeight * 2, height: displayHeight },
         collection: { x: this.buttons.collection.x, y: this.buttons.collection.y, width: displayHeight * 2, height: displayHeight },
         leftArrow: { x: this.buttons.leftArrow.x, y: this.buttons.leftArrow.y, width: arrowSize, height: arrowSize },
-        rightArrow: { x: this.buttons.rightArrow.x, y: this.buttons.rightArrow.y, width: arrowSize, height: arrowSize }
+        rightArrow: { x: this.buttons.rightArrow.x, y: this.buttons.rightArrow.y, width: arrowSize, height: arrowSize },
+        restart: { x: this.buttons.restart.x, y: this.buttons.restart.y, width: restartBtnWidth, height: restartBtnHeight }
       }
     });
     
@@ -340,10 +400,15 @@ export default class ButtonSystem {
    * Draw all buttons
    */
   draw() {
-    // Filter buttons to draw based on context
+    // Filter buttons to draw based on context and visibility
     Object.entries(this.buttons).forEach(([key, button]) => {
       // Skip contextual buttons if not visible
       if (this.contextualButtons.includes(key) && !this.contextualButtonsVisible) {
+        return;
+      }
+      
+      // Skip restart button if not visible
+      if (key === 'restart' && !button.visible) {
         return;
       }
       
