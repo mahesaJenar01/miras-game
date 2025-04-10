@@ -412,8 +412,15 @@ class Game {
       components: Object.keys(this.components)
     });
     
+    // ADDED: Check health state and update buttons accordingly
+    setTimeout(() => {
+      if (this.healthManager && !this.healthManager.isAlive) {
+        this.buttonSystem.handleGameOver(true);
+      }
+    }, 200);
+    
     this.animate();
-  }
+  }  
   
   /**
    * Stops the game animation loop.

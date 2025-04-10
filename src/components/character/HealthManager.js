@@ -382,13 +382,20 @@ class HealthManager {
               type: 'game_over',
               isAlive: false
             });
+            
+            // ADDED: Use setTimeout to ensure button system is initialized
+            setTimeout(() => {
+              if (window.game && window.game.buttonSystem) {
+                window.game.buttonSystem.handleGameOver(true);
+              }
+            }, 100);
           }
         }
       }
     } catch (e) {
       console.error('Error loading health state:', e);
     }
-  }
+  }  
   
   /**
    * Update health animations
