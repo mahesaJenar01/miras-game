@@ -107,6 +107,7 @@ class Game {
       this.handleRestart();
     });    
   }
+  
   /**
    * Handle game over state
    * @param {number} checkpointOffset - World offset to restart from
@@ -115,15 +116,23 @@ class Game {
     // Stop walking
     this.isWalking = false;
     
-    // Update state
+    // Update state for stickfigure and ensure it stays stopped
     if (this.components.stickfigure) {
       this.components.stickfigure.isWalking = false;
+      
+      // Add this to make sure stickfigure won't start moving again
+      this.components.stickfigure.canMove = false;
     }
     
     // Emit stop event to ensure consistency
     GameEvents.emitCharacter(CHARACTER_EVENTS.MOVE_STOP, {
       direction: 'right'
     });
+    
+    // Make sure attacker is also stopped
+    if (this.attacker) {
+      this.attacker.isAttacking = false;
+    }
   }
 
   /**
@@ -262,38 +271,41 @@ class Game {
     this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
     const { scene, stickfigure } = this.components;
+    
+    // Get the alive state once to use consistently throughout
+    const isAlive = !this.healthManager || this.healthManager.getAliveState();
 
     // Update and draw the scene with current world offset
     scene.update(this.worldOffset);
     scene.draw(this.worldOffset);
 
-    // Update stickfigure
-    if (stickfigure.update) {
+    // Only update stickfigure movement if alive
+    if (stickfigure.update && isAlive) {
       stickfigure.update();
     }
     
-    // Update jump physics for the stickfigure before drawing
-    if (stickfigure.updateJump) {
+    // Only update jump physics if alive
+    if (stickfigure.updateJump && isAlive) {
       stickfigure.updateJump();
     }
     
-    // Draw the stickfigure
+    // Always draw the stickfigure (even when dead)
     stickfigure.draw();
     
-    // Update and draw enemies (before attacker so attacker appears in front)
+    // Update and draw enemies
     if (this.enemyManager) {
-      this.enemyManager.updateEnemies(this.worldOffset);
+      // Only process collisions if alive
+      const checkCollisions = isAlive;
+      this.enemyManager.updateEnemies(this.worldOffset, checkCollisions);
       this.enemyManager.draw(this.worldOffset);
     }    
     
-    // Update and draw the attacker (in front of the main character)
-    if (this.attacker) {
+    // Update and draw the attacker
+    if (this.attacker && isAlive) {
       this.attacker.update();
       
-      // Get attack hitbox - pass worldOffset for proper positioning
+      // Get attack hitbox and check for hits if attacking
       const attackHitbox = this.attacker.getAttackHitbox(this.worldOffset);
-      
-      // Check for hits if attacker is attacking
       if (attackHitbox && this.enemyManager) {
         this.enemyManager.checkAttackHits(attackHitbox, this.attacker);
       }
@@ -302,23 +314,23 @@ class Game {
       this.attacker.draw();
     }
     
-    // Update and draw hit effects (on top of characters and enemies)
+    // Always update and draw visual effects
     if (this.hitEffectSystem) {
       this.hitEffectSystem.update();
       this.hitEffectSystem.draw();
     }
     
-    // Update and draw collectibles
+    // Always update and draw collectibles
     if (this.collectibleManager) {
       this.collectibleManager.update();
       this.collectibleManager.draw(this.worldOffset);
     }
 
-    // Update world offset using fixed speed if the stickfigure is walking
-    if (this.isWalking && (!this.healthManager || this.healthManager.getAliveState())) {
+    // Update world offset ONLY if the stickfigure is walking AND alive
+    if (this.isWalking && isAlive) {
       const prevOffset = this.worldOffset;
       
-      // Use a constant pixel increment for consistent speed regardless of window size
+      // Use a constant pixel increment for consistent speed
       this.worldOffset += this.gameSpeed;
       
       // Emit world update event if the offset changed
@@ -330,27 +342,26 @@ class Game {
       }
     }    
 
-    // Draw buttons using the button system
+    // Always draw buttons
     this.buttonSystem.draw();
     
-    // Update and draw collectible display (score UI)
+    // Always update and draw UI elements
     if (this.collectibleDisplay) {
       this.collectibleDisplay.update();
       this.collectibleDisplay.draw();
     }
     
-    // Update and draw shop manager
     if (this.shopManager) {
       this.shopManager.update();
       this.shopManager.draw();
     }
 
-    // Update and draw health manager
+    // Always update and draw health manager
     if (this.healthManager) {
       this.healthManager.update();
       this.healthManager.draw();
     }    
-  }
+}
 
   getScaleFactor() {
     // Calculate scale factor between current size and reference size

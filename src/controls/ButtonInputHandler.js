@@ -6,6 +6,10 @@
 import GameEvents from '../events/GameEvents.js';
 import { INPUT_EVENTS } from '../events/EventTypes.js';
 
+/**
+ * ButtonInputHandler - Centralized input handling for buttons
+ * Modified to check game state before processing inputs
+ */
 export default class ButtonInputHandler {
     /**
      * Create a new button input handler
@@ -56,7 +60,7 @@ export default class ButtonInputHandler {
     }
     
     /**
-     * Clean up event listeners (call when destroying the system)
+     * Clean up event listeners
      */
     cleanup() {
       // Mouse events
@@ -77,6 +81,21 @@ export default class ButtonInputHandler {
       // Clear tracked states
       this.activePointers.clear();
       this.activeKeys.clear();
+    }
+    
+    /**
+     * Check if game is alive/active (not in game over state)
+     * @returns {boolean} True if game is active and not in game over
+     */
+    isGameActive() {
+      // Check if game exists and health manager is available
+      const game = window.game;
+      if (!game || !game.healthManager) {
+        return true; // Default to true if we can't determine
+      }
+      
+      // Check if the game is alive
+      return game.healthManager.getAliveState();
     }
     
     /**
@@ -109,21 +128,12 @@ export default class ButtonInputHandler {
     }
     
     /**
-     * Handle mouse down event - now supports simultaneous button presses
+     * Handle mouse down event - now with game state checking
      * @param {MouseEvent} e - Mouse event
      */
     handleMouseDown(e) {
       const { x, y } = this.getCanvasCoordinates(e.clientX, e.clientY);
       const target = this.findTargetButton(x, y);
-      
-      // Add to active pointers with mouse ID
-      if (target) {
-        this.activePointers.set('mouse', { 
-          target: target,
-          x, 
-          y 
-        });
-      }
       
       // Emit the general mouse down event
       GameEvents.emitInput(INPUT_EVENTS.MOUSE_DOWN, { 
@@ -132,15 +142,27 @@ export default class ButtonInputHandler {
       });
       
       if (target) {
-        target.button.setPressed(true);
+        // Check if this is the restart button or if game is active
+        const isRestartButton = target.key === 'restart';
         
-        // Emit button-specific press event
-        GameEvents.emitInput(INPUT_EVENTS.BUTTON_PRESS, {
-          buttonKey: target.key,
-          button: target.button,
-          x, y,
-          originalEvent: e
-        });
+        // Only allow restart button when game is over, and only allow other buttons when game is active
+        if (isRestartButton || this.isGameActive()) {
+          // Add to active pointers with mouse ID
+          this.activePointers.set('mouse', { 
+            target: target,
+            x, y 
+          });
+          
+          target.button.setPressed(true);
+          
+          // Emit button-specific press event
+          GameEvents.emitInput(INPUT_EVENTS.BUTTON_PRESS, {
+            buttonKey: target.key,
+            button: target.button,
+            x, y,
+            originalEvent: e
+          });
+        }
       }
     }
     
@@ -223,31 +245,37 @@ export default class ButtonInputHandler {
         const { x, y } = this.getCanvasCoordinates(touch.clientX, touch.clientY);
         const target = this.findTargetButton(x, y);
         
-        // Track this touch point if it hit a button
-        if (target) {
-          this.activePointers.set(touch.identifier, {
-            target: target,
-            x, y
-          });
-          
-          target.button.setPressed(true);
-          
-          // Emit button-specific press event
-          GameEvents.emitInput(INPUT_EVENTS.BUTTON_PRESS, {
-            buttonKey: target.key,
-            button: target.button,
-            x, y,
-            identifier: touch.identifier,
-            originalEvent: e
-          });
-        }
-        
         // Emit the general touch start event
         GameEvents.emitInput(INPUT_EVENTS.TOUCH_START, { 
           x, y, 
           identifier: touch.identifier,
           originalEvent: e 
         });
+        
+        if (target) {
+          // Check if this is the restart button or if game is active
+          const isRestartButton = target.key === 'restart';
+          
+          // Only allow restart button when game is over, and only allow other buttons when game is active
+          if (isRestartButton || this.isGameActive()) {
+            // Track this touch point if it hit a button
+            this.activePointers.set(touch.identifier, {
+              target: target,
+              x, y
+            });
+            
+            target.button.setPressed(true);
+            
+            // Emit button-specific press event
+            GameEvents.emitInput(INPUT_EVENTS.BUTTON_PRESS, {
+              buttonKey: target.key,
+              button: target.button,
+              x, y,
+              identifier: touch.identifier,
+              originalEvent: e
+            });
+          }
+        }
       }
     }
     
@@ -362,20 +390,28 @@ export default class ButtonInputHandler {
         buttonKey = 'jump';
       } else if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") {
         buttonKey = 'attack';
+      } else if (e.key === "r" || e.key === "R") {
+        buttonKey = 'restart'; // Add restart key binding
       }
       
       if (buttonKey && this.buttons[buttonKey]) {
-        // Set the button to pressed state
-        this.buttons[buttonKey].setPressed(true);
+        // Check if this is the restart button or if game is active
+        const isRestartButton = buttonKey === 'restart';
         
-        // Emit button-specific press event
-        GameEvents.emitInput(INPUT_EVENTS.BUTTON_PRESS, {
-          buttonKey,
-          button: this.buttons[buttonKey],
-          isKeyboard: true,
-          key: e.key,
-          originalEvent: e
-        });
+        // Only allow restart button when game is over, and only allow other buttons when game is active
+        if (isRestartButton || this.isGameActive()) {
+          // Set the button to pressed state
+          this.buttons[buttonKey].setPressed(true);
+          
+          // Emit button-specific press event
+          GameEvents.emitInput(INPUT_EVENTS.BUTTON_PRESS, {
+            buttonKey,
+            button: this.buttons[buttonKey],
+            isKeyboard: true,
+            key: e.key,
+            originalEvent: e
+          });
+        }
       }
     }
     
@@ -403,6 +439,8 @@ export default class ButtonInputHandler {
         buttonKey = 'jump';
       } else if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") {
         buttonKey = 'attack';
+      } else if (e.key === "r" || e.key === "R") {
+        buttonKey = 'restart'; // Add restart key binding
       }
       
       if (buttonKey && this.buttons[buttonKey] && this.buttons[buttonKey].isPressed) {
@@ -413,7 +451,8 @@ export default class ButtonInputHandler {
         const buttonKeyMappings = {
           'move': ['ArrowRight', 'd', 'D'],
           'jump': ['ArrowUp', ' ', 'w', 'W'],
-          'attack': ['ArrowDown', 's', 'S']
+          'attack': ['ArrowDown', 's', 'S'],
+          'restart': ['r', 'R']
         };
         
         // If there's another key pressed that maps to this button, keep it pressed
