@@ -233,51 +233,100 @@ class HealthManager {
    * Set the dead state and trigger game over
    */
   setDeadState() {
-    this.isAlive = false;
-    this.gameOverVisible = true;
-    
-    // Save final state for restart
-    this.saveState();
-    
-    // Emit game over event
-    GameEvents.emitGame(GAME_EVENTS.GAME_OVER, {
-      worldOffset: this.lastCheckpoint,
-      message: "You Lose!"
-    });
-    
-    // Also emit UI update to disable other buttons
-    GameEvents.emitUI(UI_EVENTS.UPDATE, {
-      type: 'game_over',
-      isAlive: false
-    });
-  }
-  
-  /**
-   * Restart the game from the last checkpoint
-   */
-  restart() {
-    // Restore health
-    this.currentHealth = this.maxHealth;
-    this.isAlive = true;
-    this.gameOverVisible = false;
-    this.damageAnimationTimer = 0;
-    
-    // Only emit events if not already handling an event
-    if (!this._isRestartingFromEvent) {
-      // Emit restart event
-      GameEvents.emitGame(GAME_EVENTS.RESTART_COMPLETE, {
+    // Only proceed if not already dead to prevent duplicate events
+    if (this.isAlive) {
+      this.isAlive = false;
+      this.gameOverVisible = true;
+      
+      // Save final state for restart
+      this.saveState();
+      
+      console.log("[HealthManager] Setting dead state and emitting events");
+      
+      // Emit game over event - ensure this is a valid event type
+      GameEvents.emitGame(GAME_EVENTS.GAME_OVER, {
         worldOffset: this.lastCheckpoint,
-        health: this.currentHealth,
-        isAlive: true
+        message: "You Lose!"
       });
       
-      // Also emit UI update to re-enable buttons
+      // Directly disable all buttons through ButtonSystem if possible
+      if (window.game && window.game.buttonSystem) {
+        window.game.buttonSystem.handleGameOver(true);
+      }
+      
+      // Also emit UI update to disable other buttons
       GameEvents.emitUI(UI_EVENTS.UPDATE, {
-        type: 'game_restart',
-        isAlive: true
+        type: 'game_over',
+        isAlive: false
       });
+      
+      // Force stickfigure to stop all activity
+      if (window.game && window.game.components && window.game.components.stickfigure) {
+        const stickfigure = window.game.components.stickfigure;
+        stickfigure.isWalking = false;
+        stickfigure.isJumping = false;
+        
+        // Add a property to prevent further movement
+        stickfigure.canMove = false;
+      }
+      
+      // Make sure health manager state is correctly saved
+      this.saveState();
     }
-  }    
+  }  
+  
+    /**
+     * Check if game is in a state where input should be allowed
+     * @returns {boolean} True if game is in a state where input should be processed
+    */
+    shouldProcessInput() {
+        return this.isAlive;
+    }
+  
+    /**
+     * Restart the game from the last checkpoint with improved error handling
+     */
+    restart() {
+        try {
+        console.log("[HealthManager] Restarting game");
+        
+        // Restore health and state
+        this.currentHealth = this.maxHealth;
+        this.isAlive = true;
+        this.gameOverVisible = false;
+        this.damageAnimationTimer = 0;
+        
+        // Re-enable stickfigure movement
+        if (window.game && window.game.components && window.game.components.stickfigure) {
+            window.game.components.stickfigure.canMove = true;
+        }
+        
+        // Enable all buttons by directly calling ButtonSystem
+        if (window.game && window.game.buttonSystem) {
+            window.game.buttonSystem.handleGameOver(false);
+        }
+        
+        // Emit restart completion event
+        GameEvents.emitGame(GAME_EVENTS.RESTART_COMPLETE, {
+            worldOffset: this.lastCheckpoint,
+            health: this.currentHealth,
+            isAlive: true
+        });
+        
+        // Also emit UI update to re-enable buttons
+        GameEvents.emitUI(UI_EVENTS.UPDATE, {
+            type: 'game_restart',
+            isAlive: true
+        });
+        
+        // Save the restarted state
+        this.saveState();
+        
+        console.log("[HealthManager] Game successfully restarted");
+        } catch (error) {
+        console.error("[HealthManager] Error during restart:", error);
+        }
+    }
   
   /**
    * Save checkpoint and health state

@@ -149,12 +149,14 @@ export default class ButtonSystem {
     });
     
     // Listen for game over events
-    GameEvents.on(GAME_EVENTS.GAME_OVER, () => {
+    GameEvents.on(GAME_EVENTS.GAME_OVER, (data) => {
+      console.log("[ButtonSystem] Game over event received");
       this.handleGameOver(true);
     });
     
     // Listen for restart events
     GameEvents.on(GAME_EVENTS.RESTART_COMPLETE, () => {
+      console.log("[ButtonSystem] Restart complete event received");
       this.handleGameOver(false);
     });
   }
@@ -185,14 +187,21 @@ export default class ButtonSystem {
       }
     }
     
-    // Disable/enable other buttons based on game state
+    // IMPORTANT: Disable all non-restart buttons explicitly
     Object.entries(this.buttons).forEach(([key, button]) => {
       if (key !== 'restart') {
+        // Ensure the isDisabled property exists on all buttons
         if (button.isDisabled !== undefined) {
+          button.isDisabled = isGameOver;
+        } else {
+          // If the property doesn't exist, add it
           button.isDisabled = isGameOver;
         }
       }
     });
+    
+    // Log state for debugging
+    console.log(`[ButtonSystem] Game over state: ${isGameOver}, buttons disabled: ${isGameOver}`);
   }
   
   /**

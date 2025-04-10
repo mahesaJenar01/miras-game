@@ -57,6 +57,13 @@ class GameEventEmitter extends EventEmitter {
    * @returns {boolean} True if the event had listeners, false otherwise
    */
   emit(eventType, data) {
+    // Check for undefined event type
+    if (!eventType) {
+      console.warn('[GameEvents] Attempted to emit undefined event type', data);
+      // Provide a default event type to avoid errors
+      eventType = 'unknown:event';
+    }
+    
     // Record event in history if enabled
     if (this.isRecordingHistory) {
       this.eventHistory.push({
@@ -73,7 +80,7 @@ class GameEventEmitter extends EventEmitter {
     
     // Call the parent emit method
     return super.emit(eventType, data);
-  }
+  }  
   
   /**
    * Emit a game event
@@ -81,11 +88,16 @@ class GameEventEmitter extends EventEmitter {
    * @param {any} data - Optional data to pass to listeners
    */
   emitGame(eventType, data) {
+    if (!eventType) {
+      console.warn('[GameEvents] Attempted to emit game event with undefined type', data);
+      return false;
+    }
+    
     if (!Object.values(this.types.GAME_EVENTS).includes(eventType)) {
       console.warn(`[GameEvents] '${eventType}' is not a registered game event type`);
     }
     return this.emit(eventType, data);
-  }
+  }  
   
   /**
    * Emit a character event

@@ -128,17 +128,21 @@ export default class ButtonInputHandler {
     }
     
     /**
-     * Handle mouse down event - now with game state checking
+     * Handle mouse down event - strengthened game state checking
      * @param {MouseEvent} e - Mouse event
      */
     handleMouseDown(e) {
+      // First check global game state
+      const gameActive = this.isGameActive();
+      
       const { x, y } = this.getCanvasCoordinates(e.clientX, e.clientY);
       const target = this.findTargetButton(x, y);
       
-      // Emit the general mouse down event
+      // Always emit the general mouse down event for UI components
       GameEvents.emitInput(INPUT_EVENTS.MOUSE_DOWN, { 
         x, y, 
-        originalEvent: e 
+        originalEvent: e,
+        gameActive: gameActive // Add game state to event data
       });
       
       if (target) {
@@ -146,7 +150,7 @@ export default class ButtonInputHandler {
         const isRestartButton = target.key === 'restart';
         
         // Only allow restart button when game is over, and only allow other buttons when game is active
-        if (isRestartButton || this.isGameActive()) {
+        if ((isRestartButton && !gameActive) || (gameActive && !target.button.isDisabled)) {
           // Add to active pointers with mouse ID
           this.activePointers.set('mouse', { 
             target: target,
@@ -239,6 +243,9 @@ export default class ButtonInputHandler {
     handleTouchStart(e) {
       e.preventDefault(); // Prevent scrolling/zooming
       
+      // First check global game state
+      const gameActive = this.isGameActive();
+      
       // Process each touch point
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
@@ -249,7 +256,8 @@ export default class ButtonInputHandler {
         GameEvents.emitInput(INPUT_EVENTS.TOUCH_START, { 
           x, y, 
           identifier: touch.identifier,
-          originalEvent: e 
+          originalEvent: e,
+          gameActive: gameActive
         });
         
         if (target) {
@@ -257,7 +265,7 @@ export default class ButtonInputHandler {
           const isRestartButton = target.key === 'restart';
           
           // Only allow restart button when game is over, and only allow other buttons when game is active
-          if (isRestartButton || this.isGameActive()) {
+          if ((isRestartButton && !gameActive) || (gameActive && !target.button.isDisabled)) {
             // Track this touch point if it hit a button
             this.activePointers.set(touch.identifier, {
               target: target,
@@ -371,6 +379,9 @@ export default class ButtonInputHandler {
       // Skip repeated keydown events when key is held
       if (e.repeat) return;
       
+      // First check global game state
+      const gameActive = this.isGameActive();
+      
       // Add this key to the active keys set
       this.activeKeys.add(e.key);
       
@@ -378,10 +389,11 @@ export default class ButtonInputHandler {
       GameEvents.emitInput(INPUT_EVENTS.KEY_DOWN, { 
         key: e.key, 
         keyCode: e.keyCode, 
-        originalEvent: e 
+        originalEvent: e,
+        gameActive: gameActive
       });
       
-      // Map keys to buttons - Updated mapping
+      // Map keys to buttons
       let buttonKey = null;
       
       if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") {
@@ -397,16 +409,17 @@ export default class ButtonInputHandler {
       if (buttonKey && this.buttons[buttonKey]) {
         // Check if this is the restart button or if game is active
         const isRestartButton = buttonKey === 'restart';
+        const button = this.buttons[buttonKey];
         
         // Only allow restart button when game is over, and only allow other buttons when game is active
-        if (isRestartButton || this.isGameActive()) {
+        if ((isRestartButton && !gameActive) || (gameActive && !button.isDisabled)) {
           // Set the button to pressed state
-          this.buttons[buttonKey].setPressed(true);
+          button.setPressed(true);
           
           // Emit button-specific press event
           GameEvents.emitInput(INPUT_EVENTS.BUTTON_PRESS, {
             buttonKey,
-            button: this.buttons[buttonKey],
+            button: button,
             isKeyboard: true,
             key: e.key,
             originalEvent: e
