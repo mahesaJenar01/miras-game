@@ -41,6 +41,8 @@ class HealthManager {
     this.damageAnimationTimer = 0;
     this.damageAnimationDuration = 30; // frames
     
+    this._isRestartingFromEvent = false;
+
     // Register event listeners
     this.registerEventListeners();
     
@@ -83,7 +85,12 @@ class HealthManager {
     
     // Listen for restart events
     GameEvents.on(GAME_EVENTS.RESTART, () => {
-      this.restart();
+        // Add a guard to prevent recursion
+        if (!this._isRestartingFromEvent) {
+          this._isRestartingFromEvent = true;
+          this.restart();
+          this._isRestartingFromEvent = false;
+        }
     });
   }
   
@@ -255,19 +262,22 @@ class HealthManager {
     this.gameOverVisible = false;
     this.damageAnimationTimer = 0;
     
-    // Emit restart event
-    GameEvents.emitGame(GAME_EVENTS.RESTART_COMPLETE, {
-      worldOffset: this.lastCheckpoint,
-      health: this.currentHealth,
-      isAlive: true
-    });
-    
-    // Also emit UI update to re-enable buttons
-    GameEvents.emitUI(UI_EVENTS.UPDATE, {
-      type: 'game_restart',
-      isAlive: true
-    });
-  }
+    // Only emit events if not already handling an event
+    if (!this._isRestartingFromEvent) {
+      // Emit restart event
+      GameEvents.emitGame(GAME_EVENTS.RESTART_COMPLETE, {
+        worldOffset: this.lastCheckpoint,
+        health: this.currentHealth,
+        isAlive: true
+      });
+      
+      // Also emit UI update to re-enable buttons
+      GameEvents.emitUI(UI_EVENTS.UPDATE, {
+        type: 'game_restart',
+        isAlive: true
+      });
+    }
+  }    
   
   /**
    * Save checkpoint and health state

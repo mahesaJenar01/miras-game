@@ -62,6 +62,8 @@ class Game {
     // Create the health manager
     this.healthManager = new HealthManager(context, canvas);
 
+    this._isRestartingFromEvent = false;
+
     // Register event listeners
     this.registerEventListeners();
     
@@ -128,6 +130,10 @@ class Game {
    * Handle game restart
    */
   handleRestart() {
+    // Guard against recursive restart
+    if (this._isRestartingFromEvent) return;
+    this._isRestartingFromEvent = true;
+    
     // Get checkpoint from health manager
     const checkpointOffset = this.healthManager ? this.healthManager.lastCheckpoint : 0;
     
@@ -143,8 +149,6 @@ class Game {
     // Reset enemy manager to place enemies ahead
     if (this.enemyManager) {
       this.enemyManager.reset();
-      
-      // Initialize with enemies ahead of checkpoint
       this.enemyManager.initializeEnemies();
     }
     
@@ -153,10 +157,15 @@ class Game {
       this.collectibleManager.reset(true); // preserveCount=true
     }
     
-    // Emit restart complete event
-    GameEvents.emitGame(GAME_EVENTS.RESTART_COMPLETE, {
-      worldOffset: checkpointOffset
-    });
+    // Directly update health manager state instead of emitting events
+    if (this.healthManager) {
+      this.healthManager.currentHealth = this.healthManager.maxHealth;
+      this.healthManager.isAlive = true;
+      this.healthManager.gameOverVisible = false;
+      this.healthManager.damageAnimationTimer = 0;
+    }
+    
+    this._isRestartingFromEvent = false;
   }
 
   /**

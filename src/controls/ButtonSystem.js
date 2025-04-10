@@ -166,13 +166,28 @@ export default class ButtonSystem {
   handleGameOver(isGameOver) {
     // Show/hide restart button based on game over state
     if (this.buttons.restart) {
+      // Make sure to set visibility
       this.buttons.restart.setVisible(isGameOver);
+      
+      // Update position to make sure it's centered and visible
+      if (isGameOver) {
+        const canvas = this.canvas;
+        const restartBtnWidth = Math.min(200, canvas.width * 0.3);
+        const restartBtnHeight = Math.min(60, canvas.height * 0.08);
+        
+        // Position in center of screen where it's clearly visible
+        this.buttons.restart.updatePosition(
+          (canvas.width - restartBtnWidth) / 2,
+          (canvas.height / 2) + 50, // Position below "You Lose" text
+          restartBtnWidth,
+          restartBtnHeight
+        );
+      }
     }
     
     // Disable/enable other buttons based on game state
     Object.entries(this.buttons).forEach(([key, button]) => {
       if (key !== 'restart') {
-        // If it has a disabled property, set it
         if (button.isDisabled !== undefined) {
           button.isDisabled = isGameOver;
         }
