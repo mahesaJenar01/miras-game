@@ -105,7 +105,7 @@ class Attacker extends Character {
    */
   setSwordSensitivity(sensitivity) {
     // Ensure sensitivity is at least 0.5 and cap at a reasonable maximum of 3.0
-    this.swordSensitivity = Math.max(0.5, Math.min(3.0, sensitivity));
+    this.swordSensitivity = Math.max(1.5, Math.min(3.0, sensitivity));
   }
 
   /**

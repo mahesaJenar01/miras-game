@@ -292,6 +292,12 @@ class EnemyManager {
    * @param {Object} hitbox - Attack hitbox data
    * @param {Object} attacker - Attacker information
    */
+  /**
+   * Check if any enemies are hit by an attack
+   * Improved hit detection with more forgiving collision
+   * @param {Object} hitbox - Attack hitbox data
+   * @param {Object} attacker - Attacker information
+   */
   checkAttackHits(hitbox, attacker) {
     // Safety check - ensure we have valid hitbox data
     if (!hitbox || typeof hitbox !== 'object') {
@@ -307,10 +313,30 @@ class EnemyManager {
         // Get enemy position in screen coordinates for accurate hit detection
         const enemyScreenX = enemy.x - hitbox.worldOffset;
         
-        // Check for intersection between hitbox and enemy
-        const isHit = this.checkBoxIntersection(
-          hitbox.x, hitbox.y, hitbox.width, hitbox.height,
-          enemyScreenX, enemy.y, enemy.width, enemy.height
+        // Increased hit detection sensitivity based on attacker's sensitivity
+        const sensitivityMultiplier = attacker.getSwordSensitivity() || 1.0;
+        
+        // Expand hitbox and enemy hitbox based on sensitivity
+        const expandedHitbox = {
+          x: hitbox.x - 20 * sensitivityMultiplier,
+          y: hitbox.y - 20 * sensitivityMultiplier,
+          width: (hitbox.width || 0) + 40 * sensitivityMultiplier,
+          height: (hitbox.height || 0) + 40 * sensitivityMultiplier
+        };
+        
+        const expandedEnemyHitbox = {
+          x: enemyScreenX - 10 * sensitivityMultiplier,
+          y: enemy.y - 10 * sensitivityMultiplier,
+          width: enemy.width + 20 * sensitivityMultiplier,
+          height: enemy.height + 20 * sensitivityMultiplier
+        };
+        
+        // Check for rectangle collision with expanded hitboxes
+        const isHit = (
+          expandedEnemyHitbox.x < expandedHitbox.x + expandedHitbox.width &&
+          expandedEnemyHitbox.x + expandedEnemyHitbox.width > expandedHitbox.x &&
+          expandedEnemyHitbox.y < expandedHitbox.y + expandedHitbox.height &&
+          expandedEnemyHitbox.y + expandedEnemyHitbox.height > expandedHitbox.y
         );
         
         if (isHit) {
@@ -344,7 +370,8 @@ class EnemyManager {
     if (hitCount > 0) {
       GameEvents.emit(CHARACTER_EVENTS.ATTACK_HIT, {
         hitCount,
-        attacker
+        attacker,
+        hitbox: hitbox // Include hitbox for more detailed tracking
       });
     }
   }
