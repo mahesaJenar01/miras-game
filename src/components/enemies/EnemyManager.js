@@ -377,14 +377,22 @@ class EnemyManager {
   }
 
   /**
- * Simple box intersection check
- * Checks if two rectangles overlap
- */
-checkBoxIntersection(x1, y1, w1, h1, x2, y2, w2, h2) {
-    // Add some padding to make hit detection more forgiving
-    const padding = 20;
+   * Simple box intersection check with reduced padding
+   * @param {number} x1 - First box X position
+   * @param {number} y1 - First box Y position
+   * @param {number} w1 - First box width
+   * @param {number} h1 - First box height
+   * @param {number} x2 - Second box X position
+   * @param {number} y2 - Second box Y position
+   * @param {number} w2 - Second box width
+   * @param {number} h2 - Second box height
+   * @returns {boolean} True if boxes intersect
+   */
+  checkBoxIntersection(x1, y1, w1, h1, x2, y2, w2, h2) {
+    // FIXED: Reduced padding from 20 to 5 pixels for more accurate collision
+    const padding = 5;
     
-    // Use proper bounding box check with padding
+    // Use standard box collision check with minimal padding
     return (
       x1 - padding < x2 + w2 &&
       x1 + w1 + padding > x2 &&

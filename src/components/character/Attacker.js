@@ -287,7 +287,7 @@ class Attacker extends Character {
   
   /**
    * Get the attack hitbox for collision detection
-   * Fixed to include worldOffset for proper hit detection
+   * Improved with more realistic sword range and better positioning
    * @param {number} worldOffset - Current world offset
    * @returns {Object|null} Hitbox object or null if not attacking
    */
@@ -298,18 +298,36 @@ class Attacker extends Character {
     const animProgress = this.animator.attackFrame / this.animator.attackDuration;
     if (animProgress < 0.2 || animProgress > 0.7) return null;
     
-    // Calculate attack range based on character size
-    const attackRange = this.config.radius * 15; // Make this large enough
+    // Calculate sword tip position for visual feedback
+    const swordTipPosition = this.getSwordTipPosition();
     
-    // Calculate proper hitbox position in world coordinates
-    // Note: x and y should be in screen coordinates, not world coordinates
+    // FIXED: Calculate a much more reasonable attack range
+    // Reduce from radius*15 to radius*4 for a more realistic sword range
+    const attackRange = this.config.radius * 4;
+    
+    // Calculate sword angle based on attack progress
+    const attackProgress = animProgress > 0.2 && animProgress < 0.7 ? (animProgress - 0.2) / 0.5 : 0;
+    const swordAngle = Math.PI / 4 - (attackProgress * Math.PI / 2);
+    
+    // FIXED: Create a more precise hitbox based on the actual sword position
+    // Instead of a rectangular hitbox, create a more sword-shaped one
+    const hitboxWidth = attackRange;
+    const hitboxHeight = this.config.radius * 2; // Narrower height
+    
+    // Calculate hitbox center based on sword position
+    const hitboxCenterX = this.x + (Math.cos(swordAngle) * this.config.radius * 3);
+    const hitboxCenterY = this.y + (Math.sin(swordAngle) * this.config.radius * 3);
+    
+    // FIXED: Position hitbox at sword location instead of character center
     const hitbox = {
-      x: this.x + this.config.radius * 2, // Position to the right of the character
-      y: this.y - this.config.bodyLength, // Center vertically with character
-      width: attackRange,
-      height: this.config.bodyLength * 3, // Tall enough to hit different enemies
-      worldOffset: worldOffset, // Include worldOffset for EnemyManager
-      strength: 1.0 // Full strength
+      x: hitboxCenterX,
+      y: hitboxCenterY - (hitboxHeight / 2), // Center vertically
+      width: hitboxWidth,
+      height: hitboxHeight,
+      worldOffset: worldOffset,
+      strength: 1.0,
+      // Add sword tip position for visual effects
+      swordTip: swordTipPosition
     };
 
     return hitbox;
