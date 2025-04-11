@@ -114,6 +114,12 @@ class HealthManager {
     GameEvents.on(COLLECTION_EVENTS.CLOSE, () => {
       this.isMenuOpen = false;
     });
+    
+    // Listen for attack hits on enemies
+    GameEvents.on(CHARACTER_EVENTS.ATTACK_HIT, () => {
+      // Save state when player attacks successfully
+      this.saveState();
+    });
   }
   
   /**
@@ -230,6 +236,9 @@ class HealthManager {
       maxHealth: this.maxHealth,
       isAlive: this.isAlive
     });
+    
+    // Save health state to persist across page refreshes
+    this.saveState();
   }
   
   /**
@@ -249,6 +258,9 @@ class HealthManager {
       maxHealth: this.maxHealth,
       isAlive: this.isAlive
     });
+    
+    // Save health state to persist across page refreshes
+    this.saveState();
   }
   
   /**
@@ -362,6 +374,9 @@ class HealthManager {
       };
       
       localStorage.setItem('mirasGame_healthState', JSON.stringify(healthState));
+      
+      // For debugging
+      console.log('Health state saved:', healthState);
     } catch (e) {
       console.error('Error saving health state:', e);
     }
@@ -376,6 +391,7 @@ class HealthManager {
       
       if (savedState) {
         const state = JSON.parse(savedState);
+        console.log('Loaded health state:', state);
         
         // Only use valid values
         if (state.checkpoint !== undefined && state.checkpoint >= 0) {
