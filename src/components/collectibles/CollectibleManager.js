@@ -81,6 +81,13 @@ class CollectibleManager {
     GameEvents.on(GAME_EVENTS.WORLD_UPDATE, (data) => {
       if (data.worldOffset !== undefined) {
         this.handleWorldUpdate(data.worldOffset);
+        
+        // ADDED: Check for collisions during world updates (when walking)
+        // This ensures collision detection while character is walking
+        if (window.game && window.game.components && window.game.components.stickfigure) {
+          const stickfigure = window.game.components.stickfigure;
+          this.checkCollisions(stickfigure.x, stickfigure.y);
+        }
       }
     });
     
@@ -141,19 +148,6 @@ class CollectibleManager {
     
     // Emit count update with the loaded value
     this.emitCountUpdate();
-  }
-  
-  /**
-   * Save the current flowers count to localStorage
-   */
-  saveFlowersCount() {
-    try {
-      // Save the current count to localStorage
-      localStorage.setItem('mirasGame_flowerCount', this.collected.toString());
-    } catch (e) {
-      // Log any errors but continue
-      console.error('Error saving flower count:', e);
-    }
   }
   
   /**
@@ -381,6 +375,19 @@ class CollectibleManager {
     GameEvents.emitCollectible(COLLECTIBLE_EVENTS.COUNT_UPDATE, {
       count: this.collected
     });
+  }
+  
+  /**
+   * Save the current flowers count to localStorage
+   */
+  saveFlowersCount() {
+    try {
+      // Save the current count to localStorage
+      localStorage.setItem('mirasGame_flowerCount', this.collected.toString());
+    } catch (e) {
+      // Log any errors but continue
+      console.error('Error saving flower count:', e);
+    }
   }
   
   /**
