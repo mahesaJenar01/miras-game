@@ -3,7 +3,7 @@
  * Handles health display, damage, healing, and game over state
  */
 import GameEvents from '../../events/GameEvents.js';
-import { CHARACTER_EVENTS, GAME_EVENTS, UI_EVENTS, ENEMY_EVENTS } from '../../events/EventTypes.js';
+import { CHARACTER_EVENTS, GAME_EVENTS, UI_EVENTS, ENEMY_EVENTS, SHOP_EVENTS, COLLECTION_EVENTS } from '../../events/EventTypes.js';
 
 class HealthManager {
   /**
@@ -40,6 +40,10 @@ class HealthManager {
     // Animation properties
     this.damageAnimationTimer = 0;
     this.damageAnimationDuration = 30; // frames
+    
+    // Track if shop or collection menu is open
+    this.isMenuOpen = false;
+    this.menuOpacity = 0.3; // Opacity to use when a menu is open
     
     this._isRestartingFromEvent = false;
 
@@ -91,6 +95,24 @@ class HealthManager {
           this.restart();
           this._isRestartingFromEvent = false;
         }
+    });
+    
+    // Listen for shop open/close events
+    GameEvents.on(SHOP_EVENTS.OPEN, () => {
+      this.isMenuOpen = true;
+    });
+    
+    GameEvents.on(SHOP_EVENTS.CLOSE, () => {
+      this.isMenuOpen = false;
+    });
+    
+    // Listen for collection open/close events
+    GameEvents.on(COLLECTION_EVENTS.OPEN, () => {
+      this.isMenuOpen = true;
+    });
+    
+    GameEvents.on(COLLECTION_EVENTS.CLOSE, () => {
+      this.isMenuOpen = false;
     });
   }
   
@@ -416,6 +438,11 @@ class HealthManager {
     // Save context state
     context.save();
     
+    // Apply reduced opacity when a menu is open
+    if (this.isMenuOpen) {
+      context.globalAlpha = this.menuOpacity;
+    }
+    
     // Draw each flower
     for (let i = 0; i < this.maxHealth; i++) {
       const flowerX = this.x + i * (flowerSize + spacing);
@@ -427,6 +454,9 @@ class HealthManager {
       // Draw the flower
       this.drawFlower(flowerX, flowerY, flowerSize, isFilled);
     }
+    
+    // Reset opacity
+    context.globalAlpha = 1.0;
     
     // Draw game over message if dead
     if (this.gameOverVisible) {
