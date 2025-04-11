@@ -139,6 +139,8 @@ class Game {
    * Handle game restart
    */
   handleRestart() {
+    console.log("Game restart triggered"); // Debug log
+    
     // Guard against recursive restart
     if (this._isRestartingFromEvent) return;
     this._isRestartingFromEvent = true;
@@ -150,46 +152,43 @@ class Game {
       // Reset world to checkpoint
       this.worldOffset = checkpointOffset;
       
-      // Emit world update event
-      GameEvents.emitGame(GAME_EVENTS.WORLD_UPDATE, {
-        worldOffset: this.worldOffset,
-        change: 0
-      });
-      
-      // Reset enemy manager to place enemies ahead
-      if (this.enemyManager) {
-        this.enemyManager.reset();
-        this.enemyManager.initializeEnemies();
+      // Reset the character position properly
+      if (this.components.stickfigure) {
+        // Calculate proper ground Y position
+        const groundLevel = this.canvas.height * 0.8;
+        const characterHeight = this.components.stickfigure.config.radius * 5;
+        
+        // Reset position, jumping state and physics
+        this.components.stickfigure.y = groundLevel - characterHeight;
+        this.components.stickfigure.isJumping = false;
+        this.components.stickfigure.jumpVelocity = 0;
+        this.components.stickfigure.initialY = this.components.stickfigure.y;
+        this.components.stickfigure.canMove = true;
       }
       
-      // Reset collectible manager
-      if (this.collectibleManager) {
-        this.collectibleManager.reset(true); // preserveCount=true
-      }
-      
-      // Directly update health manager state
+      // Reset health
       if (this.healthManager) {
         this.healthManager.currentHealth = this.healthManager.maxHealth;
         this.healthManager.isAlive = true;
         this.healthManager.gameOverVisible = false;
-        this.healthManager.damageAnimationTimer = 0;
       }
       
-      // Enable buttons via button system
+      // Force UI update
+      GameEvents.emitGame(GAME_EVENTS.RESTART_COMPLETE, {
+        worldOffset: checkpointOffset,
+        success: true
+      });
+      
+      // Ensure buttons are enabled
       if (this.buttonSystem) {
         this.buttonSystem.handleGameOver(false);
       }
-      
-      // Emit restart complete event
-      GameEvents.emitGame(GAME_EVENTS.RESTART_COMPLETE, {
-        worldOffset: checkpointOffset
-      });
     } catch (error) {
       console.error("Error during game restart:", error);
     } finally {
       this._isRestartingFromEvent = false;
     }
-  }
+  }  
 
   /**
    * Initialize debug mode for the event system

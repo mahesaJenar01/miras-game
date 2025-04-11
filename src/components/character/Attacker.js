@@ -65,6 +65,9 @@ class Attacker extends Character {
     this.glowEffect = new GlowEffect(context);
     this.particleSystem = new ParticleSystem(context);
     
+    // Add sword sensitivity control (1.0 is default, higher means greater range)
+    this.swordSensitivity = 1.0;
+    
     // Add accessories
     this.addAccessories();
     
@@ -96,6 +99,23 @@ class Attacker extends Character {
     });
   }
   
+  /**
+   * Set sword sensitivity
+   * @param {number} sensitivity - Sensitivity value (1.0 is standard, higher means greater range)
+   */
+  setSwordSensitivity(sensitivity) {
+    // Ensure sensitivity is at least 0.5 and cap at a reasonable maximum of 3.0
+    this.swordSensitivity = Math.max(0.5, Math.min(3.0, sensitivity));
+  }
+
+  /**
+   * Get current sword sensitivity
+   * @returns {number} Current sensitivity value
+   */
+  getSwordSensitivity() {
+    return this.swordSensitivity;
+  }
+
   /**
    * Clean up event listeners when the attacker is destroyed
    */
@@ -301,37 +321,35 @@ class Attacker extends Character {
     // Calculate sword tip position for visual feedback
     const swordTipPosition = this.getSwordTipPosition();
     
-    // FIXED: Calculate a much more reasonable attack range
-    // Reduce from radius*15 to radius*4 for a more realistic sword range
-    const attackRange = this.config.radius * 4;
+    // Calculate base attack range
+    const baseAttackRange = this.config.radius * 4;
+    
+    // Apply sensitivity multiplier to the attack range
+    const attackRange = baseAttackRange * this.swordSensitivity;
     
     // Calculate sword angle based on attack progress
     const attackProgress = animProgress > 0.2 && animProgress < 0.7 ? (animProgress - 0.2) / 0.5 : 0;
     const swordAngle = Math.PI / 4 - (attackProgress * Math.PI / 2);
     
-    // FIXED: Create a more precise hitbox based on the actual sword position
-    // Instead of a rectangular hitbox, create a more sword-shaped one
+    // Create a hitbox scaled by sensitivity
     const hitboxWidth = attackRange;
-    const hitboxHeight = this.config.radius * 2; // Narrower height
+    const hitboxHeight = this.config.radius * 2 * this.swordSensitivity;
     
     // Calculate hitbox center based on sword position
     const hitboxCenterX = this.x + (Math.cos(swordAngle) * this.config.radius * 3);
     const hitboxCenterY = this.y + (Math.sin(swordAngle) * this.config.radius * 3);
     
-    // FIXED: Position hitbox at sword location instead of character center
-    const hitbox = {
+    return {
       x: hitboxCenterX,
-      y: hitboxCenterY - (hitboxHeight / 2), // Center vertically
+      y: hitboxCenterY - (hitboxHeight / 2),
       width: hitboxWidth,
       height: hitboxHeight,
       worldOffset: worldOffset,
       strength: 1.0,
-      // Add sword tip position for visual effects
+      sensitivity: this.swordSensitivity, // Include sensitivity for debugging
       swordTip: swordTipPosition
     };
-
-    return hitbox;
-  }
+  }  
   
   /**
    * Get the position of the sword tip for visual effects
