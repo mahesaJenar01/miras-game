@@ -282,16 +282,16 @@ class Game {
   animate = () => {
     this.animationFrameId = requestAnimationFrame(this.animate);
     this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
+  
     const { scene, stickfigure } = this.components;
     
     // Get the alive state once to use consistently throughout
     const isAlive = !this.healthManager || this.healthManager.getAliveState();
-
+  
     // Update and draw the scene with current world offset
     scene.update(this.worldOffset);
     scene.draw(this.worldOffset);
-
+  
     // Only update stickfigure movement if alive
     if (stickfigure.update && isAlive) {
       stickfigure.update();
@@ -338,7 +338,7 @@ class Game {
       this.collectibleManager.update();
       this.collectibleManager.draw(this.worldOffset);
     }
-
+    
     // Update world offset ONLY if the stickfigure is walking AND alive
     if (this.isWalking && isAlive) {
       const prevOffset = this.worldOffset;
@@ -352,9 +352,20 @@ class Game {
           worldOffset: this.worldOffset,
           change: this.gameSpeed
         });
+        
+        // IMPORTANT FIX: Also emit a position change event for the character
+        // This ensures collision detection happens during walking
+        GameEvents.emitCharacter(CHARACTER_EVENTS.POSITION_CHANGE, {
+          character: 'stickfigure',
+          x: stickfigure.x,
+          y: stickfigure.y,
+          state: 'walking',
+          isWalking: true,
+          isJumping: stickfigure.isJumping
+        });
       }
     }    
-
+  
     // Always draw buttons
     this.buttonSystem.draw();
     
@@ -368,13 +379,13 @@ class Game {
       this.shopManager.update();
       this.shopManager.draw();
     }
-
+  
     // Always update and draw health manager
     if (this.healthManager) {
       this.healthManager.update();
       this.healthManager.draw();
     }    
-}
+  }  
 
   getScaleFactor() {
     // Calculate scale factor between current size and reference size
