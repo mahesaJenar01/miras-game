@@ -366,20 +366,13 @@ class HealthManager {
    * Save checkpoint and health state
    */
   saveState() {
-    try {
-      const healthState = {
-        checkpoint: this.lastCheckpoint,
-        health: this.currentHealth,
-        isAlive: this.isAlive
-      };
-      
-      localStorage.setItem('mirasGame_healthState', JSON.stringify(healthState));
-      
-      // For debugging
-      console.log('Health state saved:', healthState);
-    } catch (e) {
-      console.error('Error saving health state:', e);
-    }
+    const healthState = {
+      checkpoint: this.lastCheckpoint,
+      health: this.currentHealth,
+      isAlive: this.isAlive
+    };
+    
+    localStorage.setItem('mirasGame_healthState', JSON.stringify(healthState));
   }
   
   /**
@@ -391,7 +384,6 @@ class HealthManager {
       
       if (savedState) {
         const state = JSON.parse(savedState);
-        console.log('Loaded health state:', state);
         
         // Only use valid values
         if (state.checkpoint !== undefined && state.checkpoint >= 0) {

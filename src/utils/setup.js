@@ -1,6 +1,6 @@
 /**
  * setup.js - Sets up canvas and creates modular scene and characters
- * Updated to use the event system
+ * Updated to use the event system and dynamic canvas sizing
  */
 import { createSceneConfig, updateConfigForResize } from '../scene/config.js';
 import Scene from '../scene/Scene.js';
@@ -12,14 +12,50 @@ import { GAME_EVENTS } from '../events/EventTypes.js';
 const canvas = document.getElementById("canvas");
 const context = canvas.getContext("2d");
 
-// Set canvas size based on window dimensions
+// Set canvas size to fill the entire window
 const setCanvasSize = () => {
-  canvas.width = window.innerWidth * 0.9;
-  canvas.height = window.innerHeight * 0.9;
+  // Get window dimensions
+  const windowWidth = window.innerWidth;
+  const windowHeight = window.innerHeight;
+  
+  // Set canvas to exact window size
+  canvas.width = windowWidth;
+  canvas.height = windowHeight;
+  
+  // Optional: maintain aspect ratio if needed
+  const aspectRatio = 16 / 9; // Example 16:9 aspect ratio
+  
+  if (windowWidth / windowHeight > aspectRatio) {
+    // Window is wider than the aspect ratio
+    canvas.width = windowHeight * aspectRatio;
+    canvas.height = windowHeight;
+  } else {
+    // Window is taller than the aspect ratio
+    canvas.width = windowWidth;
+    canvas.height = windowWidth / aspectRatio;
+  }
+  
+  // Ensure canvas is centered
+  canvas.style.position = 'absolute';
+  canvas.style.top = '50%';
+  canvas.style.left = '50%';
+  canvas.style.transform = 'translate(-50%, -50%)';
 };
 
 // Initial canvas setup
 setCanvasSize();
+
+// Recalculate canvas size on window resize
+window.addEventListener('resize', () => {
+  setCanvasSize();
+  
+  // Emit resize event for game components
+  GameEvents.emitGame(GAME_EVENTS.RESIZE, {
+    width: canvas.width,
+    height: canvas.height,
+    radius: Math.min(canvas.width, canvas.height) * 0.05 // Proportional radius
+  });
+});
 
 // Create configuration for components using dimensions
 const createConfiguration = () => {
@@ -32,7 +68,7 @@ const createConfiguration = () => {
     y: canvas.height * 0.575,
     color: "#FF69B4", // Hot pink for a girly look
     tickness: 3,
-    radius: canvas.height * 0.05
+    radius: Math.min(canvas.width, canvas.height) * 0.05
   };
   
   return {
@@ -77,20 +113,11 @@ const resizeCanvas = () => {
   const previousWorldOffset = window.game ? window.game.worldOffset : 0;
   const wasWalking = window.game ? window.game.isWalking : false;
   
-  // Resize canvas
+  // Resize canvas through the already defined setCanvasSize function
   setCanvasSize();
   
   // Update configuration based on new dimensions
-  configuration = {
-    scene: updateConfigForResize(configuration.scene, canvas.width, canvas.height),
-    stickfigure: {
-      x: 10 + (canvas.height * 0.05),
-      y: canvas.height * 0.575,
-      color: "#FF69B4",
-      tickness: 3,
-      radius: canvas.height * 0.05
-    }
-  };
+  configuration = createConfiguration();
   
   // Emit resize event before creating new components
   GameEvents.emitGame(GAME_EVENTS.RESIZE, {
