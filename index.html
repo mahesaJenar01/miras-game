@@ -2,13 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Miras Game</title>
   
   <!-- PWA Manifest -->
   <link rel="manifest" href="/manifest.json">
   
   <!-- iOS support -->
+   
   <meta name="apple-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -37,5 +38,41 @@
       });
     }
   </script>
+  <script>
+    // Function to handle fullscreen
+    function toggleFullScreen() {
+      // For modern mobile browsers
+      if (!document.fullscreenElement) {
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen();
+        } else if (document.documentElement.webkitRequestFullscreen) {
+          document.documentElement.webkitRequestFullscreen();
+        }
+        
+        // Hide address bar if possible
+        setTimeout(() => {
+          window.scrollTo(0, 1);
+        }, 100);
+      }
+    }
+    
+    // Add event listener to canvas to enter fullscreen on first tap
+    document.addEventListener('DOMContentLoaded', function() {
+      const canvas = document.getElementById('canvas');
+      if (canvas) {
+        canvas.addEventListener('click', function() {
+          toggleFullScreen();
+          // Only do it once
+          this.removeEventListener('click', arguments.callee);
+        });
+      }
+      
+      // Also try on first interaction with the game
+      document.addEventListener('touchstart', function() {
+        toggleFullScreen();
+        this.removeEventListener('touchstart', arguments.callee);
+      }, {once: true});
+    });
+    </script>
 </body>
 </html>

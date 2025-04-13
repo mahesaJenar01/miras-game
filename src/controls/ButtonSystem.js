@@ -326,8 +326,8 @@ export default class ButtonSystem {
     const dirtCenterY = groundY + grassHeight + (dirtHeight / 2);
     
     // Define button dimensions relative to canvas size for better responsiveness
-    const btnHeight = Math.min(dirtHeight * 0.7, canvasHeight * 0.08); // button height with max constraint
-    const btnWidth = btnHeight * 2;     // width is set to twice the height
+    const btnHeight = Math.min(dirtHeight * 0.9, canvasHeight * 0.1); // button height with max constraint
+    const btnWidth = btnHeight * 2.2;     // width is set to twice the height
     
     // Define horizontal gaps that scale with canvas size
     const sideGap = Math.max(10, canvasWidth * 0.02);     // gap from canvas left/right edges (minimum 10px)
