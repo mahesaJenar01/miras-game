@@ -355,12 +355,10 @@ class HealthManager {
         
         // Save the restarted state
         this.saveState();
-    } catch (error) {
-        console.error("[HealthManager] Error during restart:", error);
     } finally {
         this._isRestartingFromEvent = false;
     }
-    }      
+  }      
   
   /**
    * Save checkpoint and health state
@@ -379,53 +377,49 @@ class HealthManager {
    * Load saved checkpoint and health state
    */
   loadSavedState() {
-    try {
-      const savedState = localStorage.getItem('mirasGame_healthState');
+    const savedState = localStorage.getItem('mirasGame_healthState');
       
-      if (savedState) {
-        const state = JSON.parse(savedState);
+    if (savedState) {
+      const state = JSON.parse(savedState);
+      
+      // Only use valid values
+      if (state.checkpoint !== undefined && state.checkpoint >= 0) {
+        this.lastCheckpoint = state.checkpoint;
+      }
+      
+      if (state.health !== undefined && state.health >= 0 && state.health <= this.maxHealth) {
+        this.currentHealth = state.health;
+      }
+      
+      if (state.isAlive !== undefined) {
+        this.isAlive = state.isAlive;
         
-        // Only use valid values
-        if (state.checkpoint !== undefined && state.checkpoint >= 0) {
-          this.lastCheckpoint = state.checkpoint;
-        }
-        
-        if (state.health !== undefined && state.health >= 0 && state.health <= this.maxHealth) {
-          this.currentHealth = state.health;
-        }
-        
-        if (state.isAlive !== undefined) {
-          this.isAlive = state.isAlive;
+        // If loading in dead state, show game over
+        if (!this.isAlive) {
+          this.gameOverVisible = true;
           
-          // If loading in dead state, show game over
-          if (!this.isAlive) {
-            this.gameOverVisible = true;
-            
-            // Emit game over event
-            GameEvents.emitGame(GAME_EVENTS.GAME_OVER, {
-              worldOffset: this.lastCheckpoint,
-              message: "You Lose!"
-            });
-            
-            // Also emit UI update to disable other buttons
-            GameEvents.emitUI(UI_EVENTS.UPDATE, {
-              type: 'game_over',
-              isAlive: false
-            });
-            
-            // ADDED: Use setTimeout to ensure button system is initialized
-            setTimeout(() => {
-              if (window.game && window.game.buttonSystem) {
-                window.game.buttonSystem.handleGameOver(true);
-              }
-            }, 100);
-          }
+          // Emit game over event
+          GameEvents.emitGame(GAME_EVENTS.GAME_OVER, {
+            worldOffset: this.lastCheckpoint,
+            message: "You Lose!"
+          });
+          
+          // Also emit UI update to disable other buttons
+          GameEvents.emitUI(UI_EVENTS.UPDATE, {
+            type: 'game_over',
+            isAlive: false
+          });
+          
+          // ADDED: Use setTimeout to ensure button system is initialized
+          setTimeout(() => {
+            if (window.game && window.game.buttonSystem) {
+              window.game.buttonSystem.handleGameOver(true);
+            }
+          }, 100);
         }
       }
-    } catch (e) {
-      console.error('Error loading health state:', e);
     }
-  }  
+  }
   
   /**
    * Update health animations

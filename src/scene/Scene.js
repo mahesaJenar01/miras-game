@@ -106,7 +106,6 @@ class Scene {
     
     // Ensure config exists to prevent errors
     if (!config) {
-      console.warn("Scene initialized with undefined config. Using defaults.");
       return;
     }
     

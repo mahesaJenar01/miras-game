@@ -292,7 +292,6 @@ class ShopManager {
         this.updateCollectionButtonState();
       }
     } catch (e) {
-      console.error('Error loading saved shop state:', e);
       // Reset to defaults on error
       this.currentPrice = this.basePrice;
       this.purchasedCards = [];
@@ -303,19 +302,15 @@ class ShopManager {
    * Save current state to localStorage
    */
   saveState() {
-    try {
-      const state = {
-        currentPrice: this.currentPrice,
-        purchasedCards: this.purchasedCards
-      };
-      localStorage.setItem('shopState', JSON.stringify(state));
-      
-      // Update button states when state is saved
-      this.updateShopButtonState();
-      this.updateCollectionButtonState();
-    } catch (e) {
-      console.error('Error saving shop state:', e);
-    }
+    const state = {
+      currentPrice: this.currentPrice,
+      purchasedCards: this.purchasedCards
+    };
+    localStorage.setItem('shopState', JSON.stringify(state));
+    
+    // Update button states when state is saved
+    this.updateShopButtonState();
+    this.updateCollectionButtonState();
   }
   
   /**
@@ -425,7 +420,6 @@ class ShopManager {
     
     // Check if shop menu and card display exist
     if (!this.shopMenu || !this.shopMenu.cardDisplay) {
-      console.error("Shop menu or card display not initialized");
       return;
     }
     
@@ -433,7 +427,6 @@ class ShopManager {
     if (!this.shopMenu.cardDisplay.cards || 
         data.cardIndex < 0 || 
         data.cardIndex >= this.shopMenu.cardDisplay.cards.length) {
-      console.error("Invalid card index in purchase attempt");
       return;
     }
     

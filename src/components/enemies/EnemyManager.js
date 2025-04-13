@@ -225,7 +225,6 @@ class EnemyManager {
         enemy = new Bird(this.context, this.canvas, xPos, yPos);
         break;
       default:
-        console.warn(`Unknown enemy type: ${type}`);
         return null;
     }
     
@@ -275,11 +274,7 @@ class EnemyManager {
         
         // Update the remaining active enemies
         this.enemies.forEach(enemy => {
-        try {
-            enemy.update(worldOffset);
-        } catch (error) {
-            console.warn(`Error updating enemy:`, error);
-        }
+          enemy.update(worldOffset);
         });
         
         // Remove enemies that are far behind the player
@@ -301,7 +296,6 @@ class EnemyManager {
   checkAttackHits(hitbox, attacker) {
     // Safety check - ensure we have valid hitbox data
     if (!hitbox || typeof hitbox !== 'object') {
-      console.warn('Invalid hitbox data provided to checkAttackHits');
       return;
     }
     
@@ -530,13 +524,9 @@ checkEnemyHit(enemy, hitbox) {
     
     // Draw only active enemies
     activeEnemies.forEach((enemy, index) => {
-        try {
-        enemy.draw(worldOffset);
-        } catch (error) {
-        console.warn(`Error drawing enemy ${index}:`, error);
-        }
+      enemy.draw(worldOffset);
     });
-    }
+  }
   
   /**
    * Get enemy count by type

@@ -158,16 +158,7 @@ class BaseEnemy {
     
     // Restore context state
     this.context.restore();
-    
-    // Debug draw hitbox
-    if (window.location.search.includes('debug=true')) {
-        this.context.save();
-        this.context.strokeStyle = 'rgba(255, 0, 0, 0.5)';
-        this.context.lineWidth = 2;
-        this.context.strokeRect(screenX, screenY, this.width, this.height);
-        this.context.restore();
-    }
-    }
+  }
   
   /**
    * Check if the enemy is hit by an attack

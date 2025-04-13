@@ -66,9 +66,6 @@ class Game {
 
     // Register event listeners
     this.registerEventListeners();
-    
-    // Initialize debug mode for development
-    this.initializeDebugMode();
   }
   
   /**
@@ -139,8 +136,6 @@ class Game {
    * Handle game restart
    */
   handleRestart() {
-    console.log("Game restart triggered"); // Debug log
-    
     // Guard against recursive restart
     if (this._isRestartingFromEvent) return;
     this._isRestartingFromEvent = true;
@@ -183,96 +178,9 @@ class Game {
       if (this.buttonSystem) {
         this.buttonSystem.handleGameOver(false);
       }
-    } catch (error) {
-      console.error("Error during game restart:", error);
     } finally {
       this._isRestartingFromEvent = false;
     }
-  }  
-
-  /**
-   * Initialize debug mode for the event system
-   */
-  initializeDebugMode() {
-    // Check if debug mode is enabled via URL parameter
-    const urlParams = new URLSearchParams(window.location.search);
-    const debug = urlParams.get('debug') === 'true';
-    
-    if (debug) {
-      // Enable debug mode on the event system
-      GameEvents.setDebugMode(true);
-      
-      // Enable event history recording
-      GameEvents.setHistoryRecording(true, 100);
-      
-      // Add debug UI to the page
-      this.addDebugUI();
-      
-      console.log('[GAME] Debug mode enabled');
-    }
-  }
-  
-  /**
-   * Add debug UI elements to the page
-   * Positioned at the upper right corner of the canvas
-   */
-  addDebugUI() {
-    // Create a simple debug panel
-    const debugPanel = document.createElement('div');
-    
-    // Position the panel exactly at the upper right of the canvas
-    const canvasRect = this.canvas.getBoundingClientRect();
-    
-    debugPanel.style.position = 'fixed';
-    debugPanel.style.top = `${canvasRect.top + 10}px`;  // 10px from the top of canvas
-    debugPanel.style.right = `${window.innerWidth - canvasRect.right + 10}px`;  // 10px from the right of canvas
-    debugPanel.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-    debugPanel.style.color = 'white';
-    debugPanel.style.padding = '10px';
-    debugPanel.style.borderRadius = '5px';
-    debugPanel.style.fontFamily = 'monospace';
-    debugPanel.style.fontSize = '12px';
-    debugPanel.style.zIndex = '1000';
-    debugPanel.style.maxHeight = '200px';
-    debugPanel.style.overflow = 'auto';
-    debugPanel.id = 'debug-panel';
-    
-    document.body.appendChild(debugPanel);
-    
-    // Function to update debug panel position
-    // Store reference to the function for cleanup
-    this._updateDebugPanelPosition = () => {
-      const panel = document.getElementById('debug-panel');
-      if (panel) {
-        const canvasRect = this.canvas.getBoundingClientRect();
-        panel.style.top = `${canvasRect.top + 10}px`;
-        panel.style.right = `${window.innerWidth - canvasRect.right + 10}px`;
-      }
-    };
-    
-    // Update position when window is resized
-    window.addEventListener('resize', this._updateDebugPanelPosition);
-    
-    // Listen for game resize events to update position
-    GameEvents.on(GAME_EVENTS.RESIZE, this._updateDebugPanelPosition);
-    
-    // Update the debug panel content and position periodically
-    setInterval(() => {
-      if (document.getElementById('debug-panel')) {
-        // Get the last few events from history
-        const history = GameEvents.getHistory().slice(-5);
-        
-        // Format and display them
-        debugPanel.innerHTML = '<strong>Last 5 Events:</strong><br>' + 
-          history.map(event => {
-            const time = new Date(event.timestamp).toISOString().substr(11, 8);
-            return `${time} - ${event.type}`;
-          }).reverse().join('<br>');
-        
-        // Also update position in case canvas has moved
-        this._updateDebugPanelPosition();
-      }
-    }, 500);
   }
 
   /**
@@ -516,28 +424,12 @@ class Game {
     // Clean up enemy manager
     if (this.enemyManager) {
       this.enemyManager.reset();
-    }  
-  
-    // Clean up debug UI if it exists
-    const debugPanel = document.getElementById('debug-panel');
-    if (debugPanel) {
-      // Remove the resize event listener if we have a reference to it
-      if (this._updateDebugPanelPosition) {
-        window.removeEventListener('resize', this._updateDebugPanelPosition);
-        GameEvents.off(GAME_EVENTS.RESIZE, this._updateDebugPanelPosition);
-      }
-      debugPanel.remove();
     }
   }
 }
 
 // The main function initializes the game.
 const main = () => {
-  // Enable event debugging if needed
-  if (window.location.search.includes('debug=true')) {
-    GameEvents.setDebugMode(true);
-  }
-  
   // Emit game initialization event
   GameEvents.emitGame(GAME_EVENTS.INITIALIZE, {
     canvas: {
@@ -557,11 +449,6 @@ const main = () => {
   
   // Start the game.
   game.start();
-  
-  // For debugging: expose GameEvents to window for console experimentation
-  if (window.location.search.includes('debug=true')) {
-    window.GameEvents = GameEvents;
-  }
 };
 
 // Only run main() when the DOM is fully loaded

@@ -39,13 +39,6 @@ class AudioManager {
    * @param {string} src - Audio file source path
    */
   createAudio(id, src) {
-    // For this implementation, we'll just create empty audio objects
-    // In a real game, you would load actual audio files
-    this.sounds.set(id, {
-      play: () => console.log(`[AUDIO] Playing ${id} sound`),
-      stop: () => console.log(`[AUDIO] Stopping ${id} sound`),
-      volume: 1.0
-    });
   }
   
   /**

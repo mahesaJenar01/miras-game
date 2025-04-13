@@ -12,17 +12,6 @@ class EventEmitter {
       
       // Map to track one-time listeners
       this.onceListeners = new Map();
-      
-      // Debug mode flag
-      this.debugMode = false;
-    }
-    
-    /**
-     * Enable or disable debug mode
-     * @param {boolean} enabled - Whether debug mode should be enabled
-     */
-    setDebugMode(enabled) {
-      this.debugMode = enabled;
     }
     
     /**
@@ -41,10 +30,6 @@ class EventEmitter {
       }
       
       this.listeners.get(eventType).push(listener);
-      
-      if (this.debugMode) {
-        console.log(`[EventEmitter] Registered listener for '${eventType}'`);
-      }
       
       return this;
     }
@@ -109,10 +94,6 @@ class EventEmitter {
       if (index !== -1) {
         listeners.splice(index, 1);
         
-        if (this.debugMode) {
-          console.log(`[EventEmitter] Removed listener for '${eventType}'`);
-        }
-        
         // Clean up empty listener arrays
         if (listeners.length === 0) {
           this.listeners.delete(eventType);
@@ -135,10 +116,6 @@ class EventEmitter {
           const wrapperIndex = listenersList.indexOf(wrapper);
           if (wrapperIndex !== -1) {
             listenersList.splice(wrapperIndex, 1);
-          }
-          
-          if (this.debugMode) {
-            console.log(`[EventEmitter] Removed once listener for '${eventType}'`);
           }
           
           // Clean up empty arrays
@@ -164,18 +141,10 @@ class EventEmitter {
         // Remove specific event type listeners
         this.listeners.delete(eventType);
         this.onceListeners.delete(eventType);
-        
-        if (this.debugMode) {
-          console.log(`[EventEmitter] Removed all listeners for '${eventType}'`);
-        }
       } else {
         // Remove all listeners for all event types
         this.listeners.clear();
         this.onceListeners.clear();
-        
-        if (this.debugMode) {
-          console.log('[EventEmitter] Removed all listeners for all events');
-        }
       }
       
       return this;
@@ -191,14 +160,7 @@ class EventEmitter {
       const hasListeners = this.listeners.has(eventType);
       
       if (!hasListeners) {
-        if (this.debugMode) {
-          console.log(`[EventEmitter] Event '${eventType}' emitted but no listeners registered`);
-        }
         return false;
-      }
-      
-      if (this.debugMode) {
-        console.log(`[EventEmitter] Emitting event '${eventType}'`, data);
       }
       
       // Create a copy of the listeners array to prevent issues if listeners are added/removed during emission
@@ -206,11 +168,7 @@ class EventEmitter {
       
       // Execute each listener
       listeners.forEach(listener => {
-        try {
-          listener(data);
-        } catch (error) {
-          console.error(`[EventEmitter] Error in listener for '${eventType}':`, error);
-        }
+        listener(data);
       });
       
       return true;

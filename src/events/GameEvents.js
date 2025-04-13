@@ -14,40 +14,6 @@ class GameEventEmitter extends EventEmitter {
     
     // Store event types for convenience
     this.types = EventTypes;
-    
-    // Event history for debugging
-    this.eventHistory = [];
-    this.maxHistoryLength = 100;
-    this.isRecordingHistory = false;
-  }
-  
-  /**
-   * Enable or disable event history recording for debugging
-   * @param {boolean} enabled - Whether to record event history
-   * @param {number} maxLength - Maximum number of events to keep in history
-   */
-  setHistoryRecording(enabled, maxLength = 100) {
-    this.isRecordingHistory = enabled;
-    this.maxHistoryLength = maxLength;
-    
-    if (!enabled) {
-      this.clearHistory();
-    }
-  }
-  
-  /**
-   * Clear the event history
-   */
-  clearHistory() {
-    this.eventHistory = [];
-  }
-  
-  /**
-   * Get the event history
-   * @returns {Array} The event history
-   */
-  getHistory() {
-    return [...this.eventHistory];
   }
   
   /**
@@ -57,13 +23,6 @@ class GameEventEmitter extends EventEmitter {
    * @returns {boolean} True if the event had listeners, false otherwise
    */
   emit(eventType, data) {
-    // Check for undefined event type
-    if (!eventType) {
-      console.warn('[GameEvents] Attempted to emit undefined event type', data);
-      // Provide a default event type to avoid errors
-      eventType = 'unknown:event';
-    }
-    
     // Record event in history if enabled
     if (this.isRecordingHistory) {
       this.eventHistory.push({
@@ -89,14 +48,7 @@ class GameEventEmitter extends EventEmitter {
    */
   emitGame(eventType, data) {
     if (!eventType) {
-      console.warn('[GameEvents] Attempted to emit game event with undefined type', data);
       return false;
-    }
-    
-    // Check if the event type is valid, but still emit even if it's not registered
-    // This prevents errors when adding new event types
-    if (!Object.values(this.types.GAME_EVENTS).includes(eventType)) {
-      console.warn(`[GameEvents] '${eventType}' is not a registered game event type`);
     }
     return this.emit(eventType, data);
   }  
@@ -107,9 +59,6 @@ class GameEventEmitter extends EventEmitter {
    * @param {any} data - Optional data to pass to listeners
    */
   emitCharacter(eventType, data) {
-    if (!Object.values(this.types.CHARACTER_EVENTS).includes(eventType)) {
-      console.warn(`[GameEvents] '${eventType}' is not a registered character event type`);
-    }
     return this.emit(eventType, data);
   }
   
@@ -119,9 +68,6 @@ class GameEventEmitter extends EventEmitter {
    * @param {any} data - Optional data to pass to listeners
    */
   emitInput(eventType, data) {
-    if (!Object.values(this.types.INPUT_EVENTS).includes(eventType)) {
-      console.warn(`[GameEvents] '${eventType}' is not a registered input event type`);
-    }
     return this.emit(eventType, data);
   }
   
@@ -131,9 +77,6 @@ class GameEventEmitter extends EventEmitter {
    * @param {any} data - Optional data to pass to listeners
    */
   emitScene(eventType, data) {
-    if (!Object.values(this.types.SCENE_EVENTS).includes(eventType)) {
-      console.warn(`[GameEvents] '${eventType}' is not a registered scene event type`);
-    }
     return this.emit(eventType, data);
   }
   
@@ -143,9 +86,6 @@ class GameEventEmitter extends EventEmitter {
    * @param {any} data - Optional data to pass to listeners
    */
   emitUI(eventType, data) {
-    if (!Object.values(this.types.UI_EVENTS).includes(eventType)) {
-      console.warn(`[GameEvents] '${eventType}' is not a registered UI event type`);
-    }
     return this.emit(eventType, data);
   }
   
@@ -155,9 +95,6 @@ class GameEventEmitter extends EventEmitter {
    * @param {any} data - Optional data to pass to listeners
    */
   emitAudio(eventType, data) {
-    if (!Object.values(this.types.AUDIO_EVENTS).includes(eventType)) {
-      console.warn(`[GameEvents] '${eventType}' is not a registered audio event type`);
-    }
     return this.emit(eventType, data);
   }
   
@@ -167,9 +104,6 @@ class GameEventEmitter extends EventEmitter {
    * @param {any} data - Optional data to pass to listeners
    */
   emitCollectible(eventType, data) {
-    if (!Object.values(this.types.COLLECTIBLE_EVENTS).includes(eventType)) {
-      console.warn(`[GameEvents] '${eventType}' is not a registered collectible event type`);
-    }
     return this.emit(eventType, data);
   }
   

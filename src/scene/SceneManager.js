@@ -182,7 +182,6 @@ class SceneManager {
           this.applyNightEffect(options);
           break;
         default:
-          console.warn(`Unknown effect type: ${effect}`);
           break;
       }
       

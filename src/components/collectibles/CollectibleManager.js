@@ -128,22 +128,17 @@ class CollectibleManager {
    * Load previously saved flowers count from localStorage
    */
   loadSavedFlowers() {
-    try {
-      // Try to get the saved flower count from localStorage
-      const savedFlowers = localStorage.getItem('mirasGame_flowerCount');
+    // Try to get the saved flower count from localStorage
+    const savedFlowers = localStorage.getItem('mirasGame_flowerCount');
       
-      if (savedFlowers !== null) {
-        // Parse the saved count as a number
-        const count = parseInt(savedFlowers, 10);
-        
-        // Validate the count is a positive number
-        if (!isNaN(count) && count >= 0) {
-          this.collected = count;
-        }
+    if (savedFlowers !== null) {
+      // Parse the saved count as a number
+      const count = parseInt(savedFlowers, 10);
+      
+      // Validate the count is a positive number
+      if (!isNaN(count) && count >= 0) {
+        this.collected = count;
       }
-    } catch (e) {
-      // Log any errors but continue with default count (0)
-      console.error('Error loading saved flower count:', e);
     }
     
     // Emit count update with the loaded value
@@ -381,13 +376,7 @@ class CollectibleManager {
    * Save the current flowers count to localStorage
    */
   saveFlowersCount() {
-    try {
-      // Save the current count to localStorage
-      localStorage.setItem('mirasGame_flowerCount', this.collected.toString());
-    } catch (e) {
-      // Log any errors but continue
-      console.error('Error saving flower count:', e);
-    }
+    localStorage.setItem('mirasGame_flowerCount', this.collected.toString());
   }
   
   /**
