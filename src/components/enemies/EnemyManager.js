@@ -60,10 +60,102 @@ class EnemyManager {
       bird: 9     // Bird gives 9 collectibles
     };  
 
+    // Add state preservation properties
+    this.savedEnemyStates = [];
+    this.isPreservingState = false;
+
     // Register event listeners
     this.registerEventListeners();
   }
   
+  /**
+ * Preserve enemy state, then reset and restore
+ * Used during resize operations to maintain game state
+ */
+preserveAndReset() {
+  // Skip if already in a save/restore cycle
+  if (this.isPreservingState) return;
+  
+  // Set flag to prevent recursive operations
+  this.isPreservingState = true;
+  
+  try {
+    // Save the state of all active enemies
+    this.savedEnemyStates = this.enemies
+      .filter(enemy => enemy && enemy.active)
+      .map(enemy => ({
+        type: enemy.type,
+        x: enemy.x,
+        y: enemy.y,
+        health: enemy.health,
+        direction: enemy.direction,
+        yOffset: enemy.yOffset,
+        time: enemy.time,
+        isHitFlashing: enemy.isHitFlashing,
+        isDefeated: enemy.isDefeated,
+        defeatProgress: enemy.defeatProgress
+      }));
+    
+    // Save count information
+    const savedCounts = { ...this.activeEnemiesByType };
+    
+    // Perform the reset
+    this.reset();
+    
+    // Restore counts
+    Object.keys(savedCounts).forEach(type => {
+      this.activeEnemiesByType[type] = savedCounts[type];
+    });
+    
+    // Repopulate enemies from saved state
+    this.restoreEnemies();
+  } finally {
+    // Reset flag
+    this.isPreservingState = false;
+  }
+}
+/**
+ * Restore enemies from saved state
+ */
+restoreEnemies() {
+  if (!this.savedEnemyStates || this.savedEnemyStates.length === 0) return;
+  
+  // Recreate each enemy from saved state
+  this.savedEnemyStates.forEach(state => {
+    // Create a new enemy of the same type
+    const enemy = this.spawnEnemy(state.type, state.x);
+    
+    // Restore additional properties
+    if (enemy) {
+      enemy.health = state.health;
+      enemy.direction = state.direction;
+      enemy.time = state.time;
+      enemy.isHitFlashing = state.isHitFlashing;
+      enemy.isDefeated = state.isDefeated;
+      enemy.defeatProgress = state.defeatProgress;
+      
+      // Adjust Y position relative to new canvas dimensions
+      const groundLevel = this.canvas.height * 0.8;
+      
+      if (state.type === 'bird') {
+        // For birds, maintain relative height in sky
+        const oldGroundLevel = this.canvas.height * 0.8;
+        const heightAboveGround = oldGroundLevel - state.y;
+        const heightRatio = heightAboveGround / oldGroundLevel;
+        enemy.y = groundLevel - (heightRatio * groundLevel);
+      } else if (state.type === 'snake') {
+        // Snakes should be just above ground
+        enemy.y = groundLevel - 15;
+      } else if (state.type === 'tiger') {
+        // Tigers should be above ground by consistent amount
+        enemy.y = groundLevel - 30;
+      }
+    }
+  });
+  
+  // Clear saved states after restoration
+  this.savedEnemyStates = [];
+}
   /**
    * Register event listeners for enemy management
    */
@@ -506,13 +598,34 @@ checkEnemyHit(enemy, hitbox) {
     }
 
   /**
-   * Handle resize events
-   */
-  handleResize() {
-    // No specific resize handling needed for now
-    // Enemies use relative positioning based on canvas dimensions
-  }
+     * Handle resize events
+     */
+    handleResize() {
+      // When canvas is resized, we need to adjust enemy positions
+      // relative to the new dimensions
+      
+      // Store and restore enemy state
+      this.preserveAndReset();
+      
+      // Ensure enemy counts are accurate after restoration
+      this.updateEnemyCounts();
+    }
+  /**
+ * Update enemy counts by type
+ */
+updateEnemyCounts() {
+  // Reset counts
+  Object.keys(this.activeEnemiesByType).forEach(type => {
+    this.activeEnemiesByType[type] = 0;
+  });
   
+  // Count active enemies by type
+  this.enemies.forEach(enemy => {
+    if (enemy && enemy.active && enemy.type) {
+      this.activeEnemiesByType[enemy.type]++;
+    }
+  });
+}
     /**
      * Draw all active enemies
      * @param {number} worldOffset - Current world offset for parallax

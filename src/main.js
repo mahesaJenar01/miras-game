@@ -381,9 +381,9 @@ class Game {
     // Update button positions
     this.buttonSystem.updateButtonPositions();
     
-    // Reset enemy manager to initialize with new enemies
+    // Use our enhanced resize handler instead of reset
     if (this.enemyManager) {
-      this.enemyManager.reset();
+      this.enemyManager.handleResize();
     }
     
     // Start the game again
