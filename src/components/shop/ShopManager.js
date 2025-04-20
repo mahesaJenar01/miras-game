@@ -1,6 +1,6 @@
 /**
- * ShopManager.js - Manages shop functionality and coordinates between components
- * Enhanced with card collection viewing functionality
+ * ShopManager.js - Modified to clear screen when all cards are purchased
+ * Adds functionality to clear the entire screen after a 20-second delay when all cards are collected
  */
 import ShopMenu from './core/ShopMenu.js';
 import CollectionMenu from './core/CollectionMenu.js';
@@ -38,6 +38,9 @@ class ShopManager {
     // Navigation button references
     this.leftArrowBtn = null;
     this.rightArrowBtn = null;
+    
+    // Flag to track if the end game timer has been started
+    this.endGameTimerStarted = false;
     
     // Affirmation messages
     this.allAffirmations = [
@@ -146,6 +149,29 @@ class ShopManager {
       this.updateShopButtonState();
       this.updateCollectionButtonState();
     }, 2000); // Check every 2 seconds
+  }
+  
+  /**
+   * Clear the entire screen - called after all cards are purchased and the delay has passed
+   */
+  clearScreen() {
+    console.log("Clearing screen...");
+    
+    // Get the canvas and context
+    const canvas = this.canvas;
+    const context = this.context;
+    
+    // Clear the entire canvas
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Stop the game loop and remove all event listeners
+    if (window.game) {
+      window.game.stop();
+      window.game.cleanup();
+    }
+    
+    // Remove all HTML elements from the page
+    document.body.innerHTML = '';
   }
   
   /**
@@ -290,6 +316,9 @@ class ShopManager {
         // Update button states
         this.updateShopButtonState();
         this.updateCollectionButtonState();
+        
+        // Check if all cards have been purchased after loading state
+        this.checkAllCardsPurchased();
       }
     } catch (e) {
       // Reset to defaults on error
@@ -311,6 +340,28 @@ class ShopManager {
     // Update button states when state is saved
     this.updateShopButtonState();
     this.updateCollectionButtonState();
+    
+    // Check if all cards have been purchased
+    this.checkAllCardsPurchased();
+  }
+  
+  /**
+   * Check if all affirmation cards have been purchased and start the end game timer if needed
+   */
+  checkAllCardsPurchased() {
+    // Check if all cards have been purchased
+    if (this.getAvailableAffirmations().length === 0 && this.allAffirmations.length > 0) {
+      // All cards are purchased, start the end game timer
+      if (!this.endGameTimerStarted) {
+        console.log("All cards purchased! Game will end in 20 seconds...");
+        this.endGameTimerStarted = true;
+        
+        // Set a timeout to clear the screen after 20 seconds
+        setTimeout(() => {
+          this.clearScreen();
+        }, 10000); // 20 seconds
+      }
+    }
   }
   
   /**
@@ -518,7 +569,10 @@ class ShopManager {
         // Update button states based on available cards
         this.updateShopButtonState();
         this.updateCollectionButtonState();
-      }, 5000); // Wait 2 seconds after purchase to refresh cards
+        
+        // Check if we've purchased all cards
+        this.checkAllCardsPurchased();
+      }, 5000); // Wait 5 seconds after purchase to refresh cards
     }
     
     // Emit purchase success event
