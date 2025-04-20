@@ -41,12 +41,12 @@ class ShopManager {
     
     // Affirmation messages
     this.allAffirmations = [
-      "You are strong, beautiful, and capable of achieving anything you set your mind to.",
-      "Every day with you is a blessing. Your smile lights up my world.",
-      "You're not just my girlfriend, you're my best friend and my greatest adventure.",
-      "Your kindness and compassion make the world a better place. I'm so lucky to have you.",
-      "In a universe full of stars, you shine the brightest to me.",
-      "Your laugh is my favorite sound, and your happiness is my greatest goal."
+      "You are strong, beautiful, and capable of achieving anything you set your mind to, mira.",
+      "Doing things (i wish i could directly) with you, lights up my world, mira.",
+      "You're not just my girlfriend, you're my best friend and my greatest adventure, mira.",
+      "Your kindness and compassion make the world a better place. I'm so lucky to have you, mira.",
+      "In a universe full of stars, you shine the brightest to me, mira.",
+      "Your laugh is my favorite sound, and your happiness is my GREATEST goal, MIRA!."
     ];
     
     // Create shop menu

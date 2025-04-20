@@ -84,8 +84,8 @@ export default class ButtonInputHandler {
     }
     
     /**
-     * Check if game is alive/active (not in game over state)
-     * @returns {boolean} True if game is active and not in game over
+     * Check if game is alive/active (not in game over state or menu open)
+     * @returns {boolean} True if game is active and inputs should be processed
      */
     isGameActive() {
       // Check if game exists and health manager is available
@@ -95,7 +95,15 @@ export default class ButtonInputHandler {
       }
       
       // Check if the game is alive
-      return game.healthManager.getAliveState();
+      const isAlive = game.healthManager.getAliveState();
+      
+      // NEW CODE: Check if shop or collection menu is open
+      const isMenuOpen = game.shopManager && 
+                        ((game.shopManager.shopMenu && game.shopManager.shopMenu.isOpen) ||
+                          (game.shopManager.collectionMenu && game.shopManager.collectionMenu.isOpen));
+      
+      // Game is only active if player is alive AND no menu is open
+      return isAlive && !isMenuOpen;
     }
     
     /**
