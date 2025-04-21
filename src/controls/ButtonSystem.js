@@ -317,8 +317,8 @@ export default class ButtonSystem {
     const canvasWidth = canvas.width;
     
     // Calculate ground positioning based on current canvas dimensions
-    const groundY = canvasHeight * 0.8;
-    const groundHeight = canvasHeight * 0.2;
+    const groundY = canvasHeight * 0.7;
+    const groundHeight = canvasHeight * 0.3;
     const grassHeight = groundHeight * 0.3; // top portion of the ground (grass)
     const dirtHeight = groundHeight * 0.7;  // remaining (dirt)
     

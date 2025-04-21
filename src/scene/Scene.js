@@ -155,8 +155,8 @@ class Scene {
       this.ground = new Ground(
         context,
         config.ground.x || 0,
-        config.ground.y || canvas.height * 0.8,
-        config.ground.height || canvas.height * 0.2,
+        config.ground.y || canvas.height * 0.7,
+        config.ground.height || canvas.height * 0.3,
         config.ground.width || canvas.width
       );
     } else {

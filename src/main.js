@@ -150,7 +150,7 @@ class Game {
       // Reset the character position properly
       if (this.components.stickfigure) {
         // Calculate proper ground Y position
-        const groundLevel = this.canvas.height * 0.8;
+        const groundLevel = this.canvas.height * 0.7;
         const characterHeight = this.components.stickfigure.config.radius * 5;
         
         // Reset position, jumping state and physics

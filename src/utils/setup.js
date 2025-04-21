@@ -65,7 +65,7 @@ const createConfiguration = () => {
   // Character configuration (stickfigure)
   const stickfigureConfig = {
     x: 10 + (canvas.height * 0.05),
-    y: canvas.height * 0.575,
+    y: canvas.height * 0.475,
     color: "#FF69B4", // Hot pink for a girly look
     tickness: 3,
     radius: Math.min(canvas.width, canvas.height) * 0.05

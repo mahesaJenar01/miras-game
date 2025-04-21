@@ -62,8 +62,8 @@ const createSceneConfig = (canvasWidth, canvasHeight) => {
       // Ground configuration
       ground: {
         x: 0,
-        y: canvasHeight * 0.8,
-        height: canvasHeight * 0.2,
+        y: canvasHeight * 0.7,
+        height: canvasHeight * 0.3,
         width: canvasWidth,
         grassColors: ["#A9DE9F", "#B9E4AA", "#C9EBB5"],
         dirtColors: ["#D9BFA9", "#E3CAB1", "#F0DDCA"],

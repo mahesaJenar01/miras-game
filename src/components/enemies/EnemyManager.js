@@ -135,7 +135,7 @@ restoreEnemies() {
       enemy.defeatProgress = state.defeatProgress;
       
       // Adjust Y position relative to new canvas dimensions
-      const groundLevel = this.canvas.height * 0.8;
+      const groundLevel = this.canvas.height * 0.7;
       
       if (state.type === 'bird') {
         // For birds, maintain relative height in sky
@@ -286,7 +286,7 @@ restoreEnemies() {
   spawnEnemy(type, xPos) {
     // Get appropriate Y position based on enemy type
     let yPos;
-    const groundLevel = this.canvas.height * 0.8; // Same as in the scene
+    const groundLevel = this.canvas.height * 0.7; // Same as in the scene
     
     switch (type) {
       case 'snake':
