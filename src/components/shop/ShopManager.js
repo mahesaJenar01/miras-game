@@ -5,6 +5,7 @@
 import ShopMenu from './core/ShopMenu.js';
 import CollectionMenu from './core/CollectionMenu.js';
 import GameEvents from '../../events/GameEvents.js';
+import CongratsAnimation from '../../animations/CongratsAnimation.js'
 import { SHOP_EVENTS, INPUT_EVENTS, GAME_EVENTS, UI_EVENTS, COLLECTION_EVENTS } from '../../events/EventTypes.js';
 
 class ShopManager {
@@ -155,23 +156,48 @@ class ShopManager {
    * Clear the entire screen - called after all cards are purchased and the delay has passed
    */
   clearScreen() {
-    console.log("Clearing screen...");
+    console.log("Starting congratulations animation...");
     
-    // Get the canvas and context
-    const canvas = this.canvas;
-    const context = this.context;
+    // Create the congratulations animation
+    this.congratsAnimation = new CongratsAnimation(this.context, this.canvas);
     
-    // Clear the entire canvas
-    context.clearRect(0, 0, canvas.width, canvas.height);
+    // Keep track of original game loop
+    const originalAnimateFunction = window.game.animate;
     
-    // Stop the game loop and remove all event listeners
+    // Replace game animation loop with our animation
+    window.game.animate = () => {
+      // Request next frame
+      window.game.animationFrameId = requestAnimationFrame(window.game.animate);
+      
+      // Update and draw the congratulations animation
+      this.congratsAnimation.update();
+      this.congratsAnimation.draw();
+      
+      // Once animation is complete, you could:
+      // 1. Just leave it showing the final message
+      // 2. After a delay, redirect to another page
+      // 3. Reset the game
+      
+      // For now, we'll just leave it showing the final message
+      if (this.congratsAnimation.isFinished()) {
+        // You could add code here to do something after animation is complete
+        // Like: setTimeout(() => { window.location.href = 'https://example.com'; }, 5000);
+      }
+    };
+    
+    // Stop the current game systems
     if (window.game) {
-      window.game.stop();
+      // Remove all event listeners to ensure clean state
       window.game.cleanup();
+      
+      // Clear any pending animation frames
+      if (window.game.animationFrameId) {
+        cancelAnimationFrame(window.game.animationFrameId);
+      }
+      
+      // Start our new animation loop
+      window.game.animate();
     }
-    
-    // Remove all HTML elements from the page
-    document.body.innerHTML = '';
   }
   
   /**
