@@ -14,12 +14,11 @@ class CongratsAnimation {
       
       // Messages to display word by word
       this.messages = [
-        "Congratulations!",
-        "You found all the affirmation cards",
+        "Congratulations! You collected all the affirmation cards",
         "I hope this little adventure brought you joy",
         "Just like you bring joy to my life every day",
-        "I love you, Mira!",
-        "Happy birthday, panjang umur, sehat selalu ya!"
+        "Happy birthday, panjang umur, sehat selalu ya!",
+        "I love you, Mira!"
       ];
       
       // Animation properties

@@ -19,10 +19,10 @@ class ShopManager {
     this.canvas = canvas;
     
     // Pricing configuration
-    this.basePrice = 100; // Initial card price
+    this.basePrice = 30; // Initial card price
     this.currentPrice = this.basePrice;
-    this.priceIncreaseMin = 0.4; // 40% minimum increase
-    this.priceIncreaseMax = 0.5; // 50% maximum increase
+    this.priceIncreaseMin = 0.2;
+    this.priceIncreaseMax = 0.25;
     
     // Previous canvas dimensions for resize handling
     this.previousWidth = canvas.width;
